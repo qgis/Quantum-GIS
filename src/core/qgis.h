@@ -307,6 +307,30 @@ inline QString qgsDoubleToString( double a, int precision = 17 )
   }
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfloat-equal"
+#elif defined(__GCC__)
+#pragma gcc diagnostic push
+#pragma gcc diagnostic ignored "-Wfloat-equal"
+#endif
+template <class T> inline static bool almostEqual( T a, T b, T epsilon ) SIP_SKIP
+{
+  if ( a == b ) // shortcut and handles inf values
+    return true;
+
+  if ( std::isnan( a ) || std::isnan( b ) )
+    return std::isnan( a ) && std::isnan( b ) ;
+
+  const T absA = std::fabs( a );
+  const T absB = std::fabs( b );
+  const T diff = std::fabs( a - b );
+  if ( diff <= epsilon ) // fixed epsilon
+    return true;
+
+  return diff <= epsilon * std::max( absA, absB ); // adaptative epsilon
+}
+
 /**
  * Compare two doubles (but allow some difference)
  * \param a first double
@@ -315,11 +339,7 @@ inline QString qgsDoubleToString( double a, int precision = 17 )
  */
 inline bool qgsDoubleNear( double a, double b, double epsilon = 4 * std::numeric_limits<double>::epsilon() )
 {
-  if ( std::isnan( a ) || std::isnan( b ) )
-    return std::isnan( a ) && std::isnan( b ) ;
-
-  const double diff = a - b;
-  return diff > -epsilon && diff <= epsilon;
+  return almostEqual<double>( a, b, epsilon );
 }
 
 /**
@@ -330,12 +350,13 @@ inline bool qgsDoubleNear( double a, double b, double epsilon = 4 * std::numeric
  */
 inline bool qgsFloatNear( float a, float b, float epsilon = 4 * FLT_EPSILON )
 {
-  if ( std::isnan( a ) || std::isnan( b ) )
-    return std::isnan( a ) && std::isnan( b ) ;
-
-  const float diff = a - b;
-  return diff > -epsilon && diff <= epsilon;
+  return almostEqual<float>( a, b, epsilon );
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GCC__)
+#pragma gcc diagnostic pop
+#endif
 
 //! Compare two doubles using specified number of significant digits
 inline bool qgsDoubleNearSig( double a, double b, int significantDigits = 10 )
