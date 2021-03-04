@@ -312,7 +312,7 @@ void QgsAdvancedDigitizingDockWidget::setCadEnabled( bool enabled )
 }
 
 
-void QgsAdvancedDigitizingDockWidget::switchZM( void )
+void QgsAdvancedDigitizingDockWidget::switchZM( )
 {
   QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( mMapCanvas->currentLayer() );
   if ( vlayer )
