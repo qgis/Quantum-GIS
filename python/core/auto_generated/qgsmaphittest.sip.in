@@ -68,7 +68,7 @@ Tests whether a given legend key is visible for a specified layer.
 
     bool rasterVisible( QgsRasterLayer *layer ) const;
 %Docstring
-Tests whether a given legend key is visible for a specified layer.
+Tests whether a raster layer is visible.
 
 :param layer: raster layer
 

@@ -213,10 +213,18 @@ bool QgsMapHitTest::rasterVisible( QgsRasterLayer *layer ) const
   QgsRectangle footprint = layer->dataProvider()->extent();
   if ( mSettings.destinationCrs() != layer->crs() )
   {
-    QgsCoordinateTransform ct = QgsCoordinateTransform( mSettings.destinationCrs(), layer->crs(), mSettings.transformContext() );
-    footprint = ct.transformBoundingBox( footprint );
+    try
+    {
+      QgsCoordinateTransform ct = QgsCoordinateTransform( layer->crs(), mSettings.destinationCrs(), mSettings.transformContext() );
+      footprint = ct.transformBoundingBox( footprint );
+    }
+    catch (QgsCsException & )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "Could not transform map CRS to layer CRS" ) );
+      return false;
+    }
   }
-  if ( mSettings.extent().intersects( footprint ) )
+  if ( mSettings.visibleExtent().intersects( footprint ) )
     return true;
   return false;
 }
