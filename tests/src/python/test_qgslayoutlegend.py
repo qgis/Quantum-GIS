@@ -784,7 +784,6 @@ class TestQgsLayoutItemLegend(unittest.TestCase, LayoutItemTestCase):
 
         QgsProject.instance().removeMapLayers([raster_layer.id()])
 
-
     def test_reprojected_raster_extent_filtering(self):
         """Test test legend resizes to match map content"""
         raster_path = os.path.join(TEST_DATA_DIR, 'rbg256x256.png')
@@ -827,13 +826,14 @@ class TestQgsLayoutItemLegend(unittest.TestCase, LayoutItemTestCase):
         legendf.setLinkedMap(map)
 
         checker = QgsLayoutChecker(
-            'composer_legend_raster_filter', layout)
+            'composer_legend_raster_filter_reproj', layout)
         checker.setControlPathPrefix("composer_legend")
         result, message = checker.testLayout()
         TestQgsLayoutItemLegend.report += checker.report()
         self.assertTrue(result, message)
 
         QgsProject.instance().removeMapLayers([raster_layer.id()])
+
 
 if __name__ == '__main__':
     unittest.main()
