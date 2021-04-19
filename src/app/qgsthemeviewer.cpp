@@ -26,8 +26,6 @@
 QgsThemeViewer::QgsThemeViewer( QWidget *parent )
   : QgsLayerTreeView( parent )
 {
- //connect( this, &QWidget::customContextMenuRequested, this, &QgsThemeViewer::contextMenuEvent);
- QSignalBlocker(proxyModel());
 }
 
 
