@@ -1,55 +1,64 @@
+/***************************************************************************
+  qgsthemeviewer.cpp
+  --------------------------------------
+  Date                 : April 2021
+  Copyright            : (C) 2021 by Alex RL
+  Email                : ping me on github
+ ***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
 #include "qgsthemeviewer.h"
 #include "qgsmaplayer.h"
-#include <QDebug>
 #include <QDrag>
 #include <QDragEnterEvent>
+#include <QContextMenuEvent>
 #include <QDropEvent>
 #include <QWidget>
 #include <QMimeData>
+#include <QSignalBlocker>
 
 QgsThemeViewer::QgsThemeViewer( QWidget *parent )
-    : QgsLayerTreeView( parent )
+  : QgsLayerTreeView( parent )
 {
-
+ //connect( this, &QWidget::customContextMenuRequested, this, &QgsThemeViewer::contextMenuEvent);
+ QSignalBlocker(proxyModel());
 }
 
 
 QStringList QgsThemeViewer::mimeTypes() const
 {
-  qDebug()<<QString("mimetype");
   QStringList types;
   types << QStringLiteral( "application/qgis.thememanagerdata" );
   return types;
 }
 
-void QgsThemeViewer::dragEnterEvent(QDragEnterEvent *event) //incom1
+void QgsThemeViewer::dragEnterEvent( QDragEnterEvent *event )
 {
-  qDebug()<<QString("dragenter");
-  if (event->mimeData()->hasFormat( QStringLiteral( "application/qgis.layertreemodeldata" ) ) )
-      event->acceptProposedAction();
-  else if (event->mimeData()->hasFormat( QStringLiteral( "application/qgis.thememanagerdata" ) ) )
-    qDebug() << QString("hello self");
+  if ( event->mimeData()->hasFormat( QStringLiteral( "application/qgis.layertreemodeldata" ) ) )
+    event->acceptProposedAction();
 }
 
-void QgsThemeViewer::dropEvent(QDropEvent *event) //incom2
+void QgsThemeViewer::dropEvent( QDropEvent *event )
 {
-  qDebug()<<QString("dropevent");
-  if (event->mimeData()->hasFormat( QStringLiteral( "application/qgis.layertreemodeldata" ) ) )
+  if ( event->mimeData()->hasFormat( QStringLiteral( "application/qgis.layertreemodeldata" ) ) )
     emit layersAdded();
-  else if (event->mimeData()->hasFormat( QStringLiteral( "application/qgis.thememanagerdata" ) ) )
-    qDebug() << QString("hello self2");
+
 }
 
 Qt::DropActions QgsThemeViewer::supportedDropActions() const
 {
-  qDebug()<<QString("supporteddrop");
   return Qt::CopyAction | Qt::LinkAction;
 }
 
 
-QMimeData *QgsThemeViewer::mimeData() const //outdrag2
+QMimeData *QgsThemeViewer::mimeData() const
 {
-  qDebug()<<QString("mimedata");
   QMimeData *mimeData = new QMimeData();
   QList<QgsMapLayer *> layers = selectedLayers();
   //QList<QgsLayerTreeNode *> nodesFinal = indexes2nodes( sortedIndexes, true );
@@ -58,7 +67,7 @@ QMimeData *QgsThemeViewer::mimeData() const //outdrag2
     return mimeData;
 
   QStringList ids;
-  for ( QgsMapLayer *layer : qgis::as_const( layers ) )
+  for ( QgsMapLayer *layer : std::as_const( layers ) )
   {
     ids << layer->id().toUtf8();
   }
@@ -71,17 +80,19 @@ QMimeData *QgsThemeViewer::mimeData() const //outdrag2
 
 
 
-void QgsThemeViewer::startDrag( Qt::DropActions )//outdrag1
+void QgsThemeViewer::startDrag( Qt::DropActions )
 {
-    qDebug()<<QString("startdrag");
-    QMimeData *mimeDat = mimeData();
-    QDrag *drag = new QDrag( this );
-    drag->setMimeData( mimeDat );
+  QMimeData *mimeDat = mimeData();
+  QDrag *drag = new QDrag( this );
+  drag->setMimeData( mimeDat );
 
-    if ( !( drag->target() == this ) )
-      emit layersDropped();
-    else
-      qDebug() << QString("DROPTARGET IS THIS");
+  if ( !( drag->target() == this ) )
+    emit layersDropped();
+
 }
 
+void QgsThemeViewer::contextMenuEvent( QContextMenuEvent *event )
+{
+  emit showMenu( event->pos() );
+}
 
