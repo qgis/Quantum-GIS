@@ -52,7 +52,7 @@ class APP_EXPORT QgsMapThemes : public QObject
     QMenu *menu();
 
   public slots:
-  
+
     //! Handles adding a preset to the project's collection
     void addPreset();
 

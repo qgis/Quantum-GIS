@@ -1,3 +1,17 @@
+/***************************************************************************
+  qgsthememanagerwidget.h
+  --------------------------------------
+  Date                 : April 2021
+  Copyright            : (C) 2021 by Alex RL
+  Email                : ping me on github
+ ***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
 
 #ifndef QGSTHEMEMANAGERWIDGET_H
 #define QGSTHEMEMANAGERWIDGET_H
@@ -21,15 +35,16 @@ class QgsThemeViewer;
  * \since QGIS 3.20
  */
 
-class QgsThemeManagerWidget : public QgsDockWidget, private Ui::QgsThemeManagerWidgetBase //QgsLayerTreeProxyModel
+class QgsThemeManagerWidget : public QgsDockWidget, private Ui::QgsThemeManagerWidgetBase
 {
-  Q_OBJECT
+    Q_OBJECT
   public:
 
-    //! Base constructor
+    //! Base constructor for the widget
     QgsThemeManagerWidget( QWidget *parent = nullptr );
 
   signals:
+
     /**
      * Used to call viewCurrentTheme
      */
@@ -92,14 +107,22 @@ class QgsThemeManagerWidget : public QgsDockWidget, private Ui::QgsThemeManagerW
      */
     void updateComboBox();
 
+    //! Show the widget
     void showWidget();
 
+    //! Remove selected theme from the project
     void removeTheme();
 
+    //! Create a new theme based on visible layers/nodes.
     void createTheme();
 
-private:
+    //! right click menu
+    void showContextMenu( const QPoint &pos );
 
+    //! show or hide non-layers, used by context menu.
+    void changeVisibility();
+
+  private:
 
     /**
      * Used by the tool or drag & drop from the main layertree
@@ -111,15 +134,11 @@ private:
      */
     void removeThemeLayers( const QList<QgsMapLayer *> &layers );
 
+    //! Intercept drags to prevent loss of information.
     void startDrag( Qt::DropActions );
 
+    bool mShowNonLayers = false;
     QString mCurrentTheme;
-    //QToolButton *mThemePrev = nullptr;
-    //QToolButton *mThemeNext = nullptr;
-    //QToolButton *mAddThemeLayer = nullptr;
-    //QToolButton *mRemoveThemeLayer = nullptr;
-    //QComboBox *mThemeList = nullptr;
-    //QgsLayerTreeView *mThemeViewer = nullptr;
     QgsMapThemeCollection *mThemeCollection = nullptr;
 
 };
