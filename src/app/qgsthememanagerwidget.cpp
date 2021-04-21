@@ -37,12 +37,25 @@ QgsThemeManagerWidget::QgsThemeManagerWidget( QWidget *parent )
 {
   setupUi( this );
   connect( this, &QgsDockWidget::opened, this, &QgsThemeManagerWidget::showWidget );
+  connect( QgsProject::instance(), &QgsProject::readProject, this, &QgsThemeManagerWidget::projectLoaded );
+  connect( mThemePrev, &QToolButton::clicked, this, &QgsThemeManagerWidget::previousTheme );
+  connect( mThemeNext, &QToolButton::clicked, this, &QgsThemeManagerWidget::nextTheme );
+  connect( mCreateTheme, &QToolButton::clicked, this, &QgsThemeManagerWidget::createTheme );
+  connect( mDeleteTheme, &QToolButton::clicked, this, &QgsThemeManagerWidget::removeTheme );
+  connect( mAddThemeLayer, &QToolButton::clicked, this, &QgsThemeManagerWidget::addSelectedLayers );
+  connect( mRemoveThemeLayer, &QToolButton::clicked, this, &QgsThemeManagerWidget::removeSelectedLayers );
+  connect( mThemeList, qOverload<int>( &QComboBox::activated ), [ = ]( int index ) { setTheme( index ); } );
+  connect( mThemeViewer, &QgsThemeViewer::layersAdded, this, &QgsThemeManagerWidget::addSelectedLayers );
+  connect( mThemeViewer, &QgsThemeViewer::showMenu, this, &QgsThemeManagerWidget::showContextMenu );
+  //connect( mThemeViewer, &QgsThemeViewer::layersDropped, this, &QgsThemeManagerWidget::removeSelectedLayers );
+  connect( this, &QgsThemeManagerWidget::droppedLayers, this, &QgsThemeManagerWidget::removeSelectedLayers );
+  connect( this, &QgsThemeManagerWidget::addLayerTreeLayers, this, &QgsThemeManagerWidget::addSelectedLayers );
 }
 
 void QgsThemeManagerWidget::projectLoaded()
 {
   mThemeCollection = QgsProject::instance()->mapThemeCollection();
-  connect( mThemeCollection, &QgsMapThemeCollection::mapThemesChanged, this, &QgsThemeManagerWidget::populateCombo );
+  connect( mThemeCollection, &QgsMapThemeCollection::mapThemesChanged, this, &QgsThemeManagerWidget::populateCombo, Qt::UniqueConnection );
   QgsLayerTreeModel *mModel = QgisApp::instance()->layerTreeView()->layerTreeModel();
   if ( mThemeViewer && mModel )
   {
@@ -51,8 +64,11 @@ void QgsThemeManagerWidget::projectLoaded()
   }
   if ( mThemeCollection && mThemeCollection->mapThemes().length() > 0 )
   {
-    mCurrentTheme = mThemeCollection->mapThemes()[0];
-    mThemeList->setCurrentText( mCurrentTheme );
+    if ( !mThemeCollection->hasMapTheme( mCurrentTheme ) )
+    {
+      mCurrentTheme = mThemeCollection->mapThemes()[0];
+      mThemeList->setCurrentText( mCurrentTheme );
+    }
     populateCombo();
     viewCurrentTheme();
   }
@@ -60,21 +76,8 @@ void QgsThemeManagerWidget::projectLoaded()
 
 void QgsThemeManagerWidget::showWidget()
 {
-  projectLoaded();
-  connect( QgsProject::instance(), &QgsProject::readProject, this, &QgsThemeManagerWidget::projectLoaded );
-  connect( mThemePrev, &QToolButton::clicked, this, &QgsThemeManagerWidget::previousTheme );
-  connect( mThemeNext, &QToolButton::clicked, this, &QgsThemeManagerWidget::nextTheme );
-  connect( mCreateTheme, &QToolButton::clicked, this, &QgsThemeManagerWidget::createTheme );
-  connect( mDeleteTheme, &QToolButton::clicked, this, &QgsThemeManagerWidget::removeTheme );
-  connect( mAddThemeLayer, &QToolButton::clicked, this, &QgsThemeManagerWidget::addSelectedLayers );
-  connect( mRemoveThemeLayer, &QToolButton::clicked, this, &QgsThemeManagerWidget::removeSelectedLayers );
-  connect( mThemeList, qOverload<int>( &QComboBox::currentIndexChanged ), [ = ]( int index ) { setTheme( index ); } );
-  connect( mThemeViewer, &QgsThemeViewer::layersAdded, this, &QgsThemeManagerWidget::addSelectedLayers );
-  connect( mThemeViewer, &QgsThemeViewer::showMenu, this, &QgsThemeManagerWidget::showContextMenu );
-  //connect( mThemeViewer, &QgsThemeViewer::layersDropped, this, &QgsThemeManagerWidget::removeSelectedLayers );
-  connect( this, &QgsThemeManagerWidget::droppedLayers, this, &QgsThemeManagerWidget::removeSelectedLayers );
-  connect( this, &QgsThemeManagerWidget::addLayerTreeLayers, this, &QgsThemeManagerWidget::addSelectedLayers );
-
+  if ( mCurrentTheme.isEmpty() )
+    projectLoaded();
 }
 
 void QgsThemeManagerWidget::setTheme( const int index )
@@ -135,7 +138,6 @@ void QgsThemeManagerWidget::populateCombo()
   QStringList themes = QgsProject::instance()->mapThemeCollection()->mapThemes();
   if ( !themes.isEmpty() )
   {
-
     mThemeList->addItems( themes );
     if ( themes.contains( mCurrentTheme ) )
       mThemeList->setCurrentText( mCurrentTheme );
