@@ -96,7 +96,7 @@ void QgsThemeManagerWidget::setTheme( const int index )
 void QgsThemeManagerWidget::createTheme()
 {
   QgsMapThemes::instance()->addPreset();
-  populateCombo();
+  emit updateComboBox();
 }
 
 void QgsThemeManagerWidget::removeTheme()
@@ -106,8 +106,10 @@ void QgsThemeManagerWidget::removeTheme()
                                    QMessageBox::Yes | QMessageBox::No, QMessageBox::No );  if ( res == QMessageBox::Yes )
   {
     mThemeCollection->removeMapTheme( mCurrentTheme );
-    populateCombo();
+    mCurrentTheme = mThemeCollection->mapThemes()[0];
+    emit updateComboBox();
   }
+
 }
 
 void QgsThemeManagerWidget::previousTheme()
