@@ -211,6 +211,11 @@ bool QgsMapHitTest::rasterVisible( QgsRasterLayer *layer ) const
 {
   if ( ! layer->dataProvider() )
     return false;
+  if ( layer->hasScaleBasedVisibility() )
+  {
+    if ( mSettings.scale() => layer->minimumScale() || mSettings.scale() <= lyr->maximumScale() )
+      return false;
+  }
   QgsRectangle footprint = layer->dataProvider()->extent();
   if ( mSettings.destinationCrs() != layer->crs() )
   {
