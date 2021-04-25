@@ -213,7 +213,7 @@ bool QgsMapHitTest::rasterVisible( QgsRasterLayer *layer ) const
     return false;
   if ( layer->hasScaleBasedVisibility() )
   {
-    if ( mSettings.scale() => layer->minimumScale() || mSettings.scale() <= lyr->maximumScale() )
+    if ( mSettings.scale() >= layer->minimumScale() || mSettings.scale() <= layer->maximumScale() )
       return false;
   }
   QgsRectangle footprint = layer->dataProvider()->extent();
