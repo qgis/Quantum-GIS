@@ -151,6 +151,7 @@ void QgsMapToolCapture::currentLayerChanged( QgsMapLayer *layer )
     mTempRubberBand->setRubberBandGeometryType( mCaptureMode == CapturePolygon ? QgsWkbTypes::PolygonGeometry : QgsWkbTypes::LineGeometry );
 
   resetRubberBand();
+  cadDockWidget()->switchZM();
 }
 
 
@@ -462,9 +463,9 @@ int QgsMapToolCapture::nextPoint( const QgsPoint &mapPoint, QgsPoint &layerPoint
     QgsPointXY mapP( mapPoint.x(), mapPoint.y() );  //#spellok
     layerPoint = QgsPoint( toLayerCoordinates( vlayer, mapP ) ); //transform snapped point back to layer crs  //#spellok
     if ( QgsWkbTypes::hasZ( vlayer->wkbType() ) )
-      layerPoint.addZValue( defaultZValue() );
+      layerPoint.addZValue( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().z() : defaultZValue() );
     if ( QgsWkbTypes::hasM( vlayer->wkbType() ) )
-      layerPoint.addMValue( 0.0 );
+      layerPoint.addMValue( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().m() : 0.0 );
   }
   catch ( QgsCsException &cse )
   {
@@ -513,9 +514,9 @@ int QgsMapToolCapture::fetchLayerPoint( const QgsPointLocator::Match &match, Qgs
       {
         layerPoint = geom.constGet()->vertexAt( vId );
         if ( QgsWkbTypes::hasZ( vlayer->wkbType() ) && !layerPoint.is3D() )
-          layerPoint.addZValue( defaultZValue() );
+          layerPoint.addZValue( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().z() : defaultZValue() );
         if ( QgsWkbTypes::hasM( vlayer->wkbType() ) && !layerPoint.isMeasure() )
-          layerPoint.addMValue( 0.0 );
+          layerPoint.addMValue( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().m() : 0.0 );
       }
 
       // ZM support depends on the target layer
@@ -1005,7 +1006,12 @@ QgsPoint QgsMapToolCapture::mapPoint( const QgsPointXY &point ) const
   // set z value if necessary
   if ( QgsWkbTypes::hasZ( newPoint.wkbType() ) )
   {
-    newPoint.setZ( defaultZValue() );
+    newPoint.setZ( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().z() : defaultZValue() );
+  }
+  // set m value if necessary
+  if ( QgsWkbTypes::hasM( newPoint.wkbType() ) )
+  {
+    newPoint.setM( mCadDockWidget && mCadDockWidget->cadEnabled() ? mCadDockWidget->currentPoint().m() : 0.0 );
   }
 
   return newPoint;
