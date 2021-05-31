@@ -142,7 +142,7 @@ network drive or other non-fixed device.
 
 class QgsFileSearchTask: QgsTask
 {
-%Docstring
+%Docstring(signature="appended")
 Background thread handler for findFile.
 
 .. versionadded:: 3.18
