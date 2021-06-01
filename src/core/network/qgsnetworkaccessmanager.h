@@ -31,6 +31,7 @@
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
+#include "qgssettingsentry.h"
 
 class QgsFeedback;
 
@@ -45,7 +46,7 @@ constexpr int sFilePrefixLength = CMAKE_SOURCE_DIR[sizeof( CMAKE_SOURCE_DIR ) - 
 /**
  * \class QgsNetworkRequestParameters
  * \ingroup core
- * Encapsulates parameters and properties of a network request.
+ * \brief Encapsulates parameters and properties of a network request.
  * \since QGIS 3.6
  */
 class CORE_EXPORT QgsNetworkRequestParameters
@@ -143,7 +144,7 @@ class QgsNetworkAccessManager;
  * \brief SSL error handler, used for responding to SSL errors encountered during network requests.
  * \ingroup core
  *
- * QgsSslErrorHandler responds to SSL errors encountered during network requests. The
+ * \brief QgsSslErrorHandler responds to SSL errors encountered during network requests. The
  * base QgsSslErrorHandler class responds to SSL errors only by logging the errors,
  * and uses the default Qt response, which is to abort the request.
  *
@@ -192,7 +193,7 @@ class CORE_EXPORT QgsSslErrorHandler
  * \brief Network authentication handler, used for responding to network authentication requests during network requests.
  * \ingroup core
  *
- * QgsNetworkAuthenticationHandler responds to authentication requests encountered during network requests. The
+ * \brief QgsNetworkAuthenticationHandler responds to authentication requests encountered during network requests. The
  * base QgsNetworkAuthenticationHandler class responds to requests only by logging the request,
  * but does not provide any username or password to allow the request to proceed.
  *
@@ -227,6 +228,20 @@ class CORE_EXPORT QgsNetworkAuthenticationHandler
      */
     virtual void handleAuthRequest( QNetworkReply *reply, QAuthenticator *auth );
 
+    /**
+     * Called to initiate a network authentication through external browser \a url.
+     *
+     * \since QGIS 3.20
+     */
+    virtual void handleAuthRequestOpenBrowser( const QUrl &url );
+
+    /**
+     * Called to terminate a network authentication through external browser.
+     *
+     * \since QGIS 3.20
+     */
+    virtual void handleAuthRequestCloseBrowser();
+
 };
 #endif
 
@@ -236,7 +251,7 @@ class CORE_EXPORT QgsNetworkAuthenticationHandler
  * \brief network access manager for QGIS
  * \ingroup core
  *
- * This class implements the QGIS network access manager.  It's a singleton
+ * \brief This class implements the QGIS network access manager.  It's a singleton
  * that can be used across QGIS.
  *
  * Plugins can insert proxy factories and thereby redirect requests to
@@ -499,6 +514,37 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
      */
     static QgsNetworkReplyContent blockingPost( QNetworkRequest &request, const QByteArray &data, const QString &authCfg = QString(), bool forceRefresh = false, QgsFeedback *feedback = nullptr );
 
+    /**
+     * Forwards an external browser login \a url opening request to the authentication handler.
+     *
+     * \note If called by a background thread, the request will be forwarded to the network manager on the main thread.
+     * \since QGIS 3.20
+     */
+    void requestAuthOpenBrowser( const QUrl &url ) const;
+
+    /**
+     * Forwards an external browser login closure request to the authentication handler.
+     *
+     * \note If called by a background thread, the request will be forwarded to the network manager on the main thread.
+     * \since QGIS 3.20
+     */
+    void requestAuthCloseBrowser() const;
+
+    /**
+     * Abort any outstanding external browser login request.
+     *
+     * \note Background threads will listen to aborted browser request signals from the network manager on the main thread.
+     * \since QGIS 3.20
+     */
+    void abortAuthBrowser();
+
+
+#ifndef SIP_RUN
+    //! Settings entry network timeout
+    static const inline QgsSettingsEntryInteger settingsNetworkTimeout = QgsSettingsEntryInteger( QStringLiteral( "/qgis/networkAndProxy/networkTimeout" ), QgsSettings::NoSection, 60000, QObject::tr( "Network timeout" ) );
+#endif
+
+
   signals:
 
     /**
@@ -641,6 +687,12 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
 ///@endcond
 #endif
 
+    /**
+     * Emitted when external browser logins are to be aborted.
+     *
+     * \since QGIS 3.20
+     */
+    void authBrowserAborted();
 
   private slots:
     void abortRequest();

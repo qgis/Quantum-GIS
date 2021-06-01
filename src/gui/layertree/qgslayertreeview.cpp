@@ -66,11 +66,7 @@ QgsLayerTreeView::QgsLayerTreeView( QWidget *parent )
   setItemDelegate( new QgsLayerTreeViewItemDelegate( this ) );
   setStyle( new QgsLayerTreeViewProxyStyle( this ) );
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
-  setLayerMarkWidth( static_cast< int >( QFontMetricsF( font() ).width( 'l' ) * Qgis::UI_SCALE_FACTOR ) );
-#else
   setLayerMarkWidth( static_cast< int >( QFontMetricsF( font() ).horizontalAdvance( 'l' ) * Qgis::UI_SCALE_FACTOR ) );
-#endif
 
   connect( this, &QTreeView::collapsed, this, &QgsLayerTreeView::updateExpandedStateToNode );
   connect( this, &QTreeView::expanded, this, &QgsLayerTreeView::updateExpandedStateToNode );
@@ -91,7 +87,7 @@ void QgsLayerTreeView::setModel( QAbstractItemModel *model )
 
   if ( mMessageBar )
     connect( treeModel, &QgsLayerTreeModel::messageEmitted,
-             [ = ]( const QString & message, Qgis::MessageLevel level = Qgis::Info, int duration = 5 )
+             [ = ]( const QString & message, Qgis::MessageLevel level = Qgis::MessageLevel::Info, int duration = 5 )
   {
     Q_UNUSED( duration )
     mMessageBar->pushMessage( message, level );
@@ -558,7 +554,7 @@ void QgsLayerTreeView::setMessageBar( QgsMessageBar *messageBar )
 
   if ( mMessageBar )
     connect( layerTreeModel(), &QgsLayerTreeModel::messageEmitted,
-             [ = ]( const QString & message, Qgis::MessageLevel level = Qgis::Info, int duration = 5 )
+             [ = ]( const QString & message, Qgis::MessageLevel level = Qgis::MessageLevel::Info, int duration = 5 )
   {
     Q_UNUSED( duration )
     mMessageBar->pushMessage( message, level );

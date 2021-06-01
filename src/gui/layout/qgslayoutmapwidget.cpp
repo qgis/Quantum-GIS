@@ -35,9 +35,11 @@
 #include "qgsreferencedgeometry.h"
 #include "qgsprojectviewsettings.h"
 #include "qgsmaplayermodel.h"
+#include "qgsfillsymbol.h"
 
 #include <QMenu>
 #include <QMessageBox>
+#include <QStringListModel>
 
 QgsLayoutMapWidget::QgsLayoutMapWidget( QgsLayoutItemMap *item, QgsMapCanvas *mapCanvas )
   : QgsLayoutItemBaseWidget( nullptr, item )
@@ -136,7 +138,7 @@ QgsLayoutMapWidget::QgsLayoutMapWidget( QgsLayoutItemMap *item, QgsMapCanvas *ma
   mCrsSelector->setOptionVisible( QgsProjectionSelectionWidget::CrsNotSet, true );
   mCrsSelector->setNotSetText( tr( "Use Project CRS" ) );
 
-  mOverviewFrameStyleButton->setSymbolType( QgsSymbol::Fill );
+  mOverviewFrameStyleButton->setSymbolType( Qgis::SymbolType::Fill );
 
   // follow preset combo
   mFollowVisibilityPresetCombo->setModel( new QStringListModel( mFollowVisibilityPresetCombo ) );
@@ -314,6 +316,9 @@ void QgsLayoutMapWidget::followVisibilityPresetSelected( int currentIndex )
   if ( !mMapItem )
     return;
 
+  if ( mBlockThemeComboChanges != 0 )
+    return;
+
   if ( currentIndex == -1 )
     return;  // doing combo box model reset
 
@@ -361,6 +366,7 @@ void QgsLayoutMapWidget::onMapThemesChanged()
 {
   if ( QStringListModel *model = qobject_cast<QStringListModel *>( mFollowVisibilityPresetCombo->model() ) )
   {
+    mBlockThemeComboChanges++;
     QStringList lst;
     lst.append( tr( "(none)" ) );
     lst += QgsProject::instance()->mapThemeCollection()->mapThemes();
@@ -371,6 +377,7 @@ void QgsLayoutMapWidget::onMapThemesChanged()
     mFollowVisibilityPresetCombo->blockSignals( true );
     mFollowVisibilityPresetCombo->setCurrentIndex( presetModelIndex != -1 ? presetModelIndex : 0 ); // 0 == none
     mFollowVisibilityPresetCombo->blockSignals( false );
+    mBlockThemeComboChanges--;
   }
 }
 
@@ -519,9 +526,6 @@ void QgsLayoutMapWidget::mTemporalCheckBox_toggled( bool checked )
     return;
   }
 
-  mStartDateTime->setEnabled( checked );
-  mEndDateTime->setEnabled( checked );
-
   mMapItem->layout()->undoStack()->beginCommand( mMapItem, tr( "Toggle Temporal Range" ) );
   mMapItem->setIsTemporal( checked );
   mMapItem->layout()->undoStack()->endCommand();
@@ -542,7 +546,9 @@ void QgsLayoutMapWidget::updateTemporalExtent()
     return;
   }
 
-  QgsDateTimeRange range = QgsDateTimeRange( mStartDateTime->dateTime(), mEndDateTime->dateTime() );
+  const QDateTime begin = mStartDateTime->dateTime();
+  const QDateTime end = mEndDateTime->dateTime();
+  QgsDateTimeRange range = QgsDateTimeRange( begin, end, true, begin == end );
 
   mMapItem->layout()->undoStack()->beginCommand( mMapItem, tr( "Set Temporal Range" ) );
   mMapItem->setTemporalRange( range );
@@ -2000,7 +2006,7 @@ QgsLayoutMapClippingWidget::QgsLayoutMapClippingWidget( QgsLayoutItemMap *map )
       mMapItem->endCommand();
     }
   } );
-  connect( mAtlasClippingTypeComboBox, qgis::overload<int>::of( &QComboBox::currentIndexChanged ), this, [ = ]
+  connect( mAtlasClippingTypeComboBox, qOverload<int>( &QComboBox::currentIndexChanged ), this, [ = ]
   {
     if ( !mBlockUpdates )
     {
@@ -2058,7 +2064,7 @@ QgsLayoutMapClippingWidget::QgsLayoutMapClippingWidget( QgsLayoutItemMap *map )
       mMapItem->endCommand();
     }
   } );
-  connect( mItemClippingTypeComboBox, qgis::overload<int>::of( &QComboBox::currentIndexChanged ), this, [ = ]
+  connect( mItemClippingTypeComboBox, qOverload<int>( &QComboBox::currentIndexChanged ), this, [ = ]
   {
     if ( !mBlockUpdates )
     {

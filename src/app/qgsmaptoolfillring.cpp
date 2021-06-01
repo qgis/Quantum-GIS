@@ -33,6 +33,20 @@ QgsMapToolFillRing::QgsMapToolFillRing( QgsMapCanvas *canvas )
   mToolName = tr( "Fill ring" );
 }
 
+bool QgsMapToolFillRing::supportsTechnique( QgsMapToolCapture::CaptureTechnique technique ) const
+{
+  switch ( technique )
+  {
+    case QgsMapToolCapture::StraightSegments:
+    case QgsMapToolCapture::Streaming:
+      return true;
+
+    case QgsMapToolCapture::CircularString:
+      return false;
+  }
+  return false;
+}
+
 void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 {
   //check if we operate on a vector layer
@@ -67,7 +81,7 @@ void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
     else if ( error == 2 )
     {
       // problem with coordinate transformation
-      emit messageEmitted( tr( "Cannot transform the point to the layers coordinate system" ), Qgis::Warning );
+      emit messageEmitted( tr( "Cannot transform the point to the layers coordinate system" ), Qgis::MessageLevel::Warning );
       return;
     }
 
@@ -123,14 +137,14 @@ void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
       {
         errorMessage = tr( "an unknown error occurred" );
       }
-      emit messageEmitted( tr( "could not add ring since %1." ).arg( errorMessage ), Qgis::Critical );
+      emit messageEmitted( tr( "could not add ring since %1." ).arg( errorMessage ), Qgis::MessageLevel::Critical );
       vlayer->destroyEditCommand();
 
       return;
     }
 
     QgsLineString ext( pointList );
-    std::unique_ptr< QgsPolygon > polygon = qgis::make_unique< QgsPolygon >( );
+    std::unique_ptr< QgsPolygon > polygon = std::make_unique< QgsPolygon >( );
     polygon->setExteriorRing( ext.clone() );
     g = QgsGeometry( std::move( polygon ) );
   }
@@ -142,7 +156,7 @@ void QgsMapToolFillRing::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 
     if ( fid == -1 )
     {
-      emit messageEmitted( tr( "No ring found to fill." ), Qgis::Critical );
+      emit messageEmitted( tr( "No ring found to fill." ), Qgis::MessageLevel::Critical );
       vlayer->destroyEditCommand();
       return;
     }

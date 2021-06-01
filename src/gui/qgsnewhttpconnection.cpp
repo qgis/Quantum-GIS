@@ -25,6 +25,8 @@
 #include <QPushButton>
 #include <QRegExp>
 #include <QRegExpValidator>
+#include <QtEndian>
+#include <QUrlQuery>
 
 QgsNewHttpConnection::QgsNewHttpConnection( QWidget *parent, ConnectionTypes types, const QString &baseKey, const QString &connectionName, QgsNewHttpConnection::Flags flags, Qt::WindowFlags fl )
   : QDialog( parent, fl )
@@ -112,6 +114,10 @@ QgsNewHttpConnection::QgsNewHttpConnection( QWidget *parent, ConnectionTypes typ
   {
     mWfsOptionsGroupBox->setVisible( false );
     mGroupBox->layout()->removeWidget( mWfsOptionsGroupBox );
+  }
+  else
+  {
+    txtUrl->setToolTip( tr( "HTTP address of the WFS service, or landing page of a OGC API service<br>(an ending slash might be needed for some OGC API servers)" ) );
   }
 
   if ( mTypes & ConnectionWcs )

@@ -53,7 +53,7 @@ typedef QList < QPair< QString, QColor > > QgsLegendColorList;
 /**
  * \ingroup core
  *
- * Represents a raster layer.
+ * \brief Represents a raster layer.
  *
  * A QgsRasterLayer is instantiated by specifying the name of a data provider,
  * such as "gdal" or "wms", and a url defining the specific data set to connect to.
@@ -220,20 +220,6 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
      * \since QGIS 3.2
      */
     void setDataProvider( const QString &provider, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
-
-    /**
-     * Updates the data source of the layer. The layer's renderer and legend will be preserved only
-     * if the geometry type of the new data source matches the current geometry type of the layer.
-     * \param dataSource new layer data source
-     * \param baseName base name of the layer
-     * \param provider provider string
-     * \param options provider options
-     * \param loadDefaultStyleFlag set to TRUE to reset the layer's style to the default for the
-     * data source
-     * \see dataSourceChanged()
-     * \since QGIS 3.6
-     */
-    void setDataSource( const QString &dataSource, const QString &baseName, const QString &provider, const QgsDataProvider::ProviderOptions &options, bool loadDefaultStyleFlag = false ) override;
 
     /**
      * Returns the raster layer type (which is a read only property).
@@ -537,6 +523,19 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
                         const QgsRectangle &extent,
                         int sampleSize,
                         double &min, double &max );
+
+    /**
+     * Updates the data source of the layer. The layer's renderer and legend will be preserved only
+     * if the geometry type of the new data source matches the current geometry type of the layer.
+     * \param dataSource new layer data source
+     * \param baseName base name of the layer
+     * \param provider provider string
+     * \param options provider options
+     * \param flags provider read flags
+     * \see dataSourceChanged()
+     * \since QGIS 3.20
+     */
+    void setDataSourcePrivate( const QString &dataSource, const QString &baseName, const QString &provider, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags ) override;
 
     //! \brief  Constant defining flag for XML and a constant that signals property not used
     const QString QSTRING_NOT_SET;

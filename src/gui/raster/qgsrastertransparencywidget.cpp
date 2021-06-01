@@ -77,8 +77,8 @@ void QgsRasterTransparencyWidget::syncToLayer()
   QgsRasterRenderer *renderer = mRasterLayer->renderer();
   if ( provider )
   {
-    if ( provider->dataType( 1 ) == Qgis::ARGB32
-         || provider->dataType( 1 ) == Qgis::ARGB32_Premultiplied )
+    if ( provider->dataType( 1 ) == Qgis::DataType::ARGB32
+         || provider->dataType( 1 ) == Qgis::DataType::ARGB32_Premultiplied )
     {
       gboxNoDataValue->setEnabled( false );
       gboxCustomTransparency->setEnabled( false );
@@ -305,7 +305,11 @@ void QgsRasterTransparencyWidget::pbnImportTransparentPixelValues_clicked()
         {
           if ( !myInputLine.simplified().startsWith( '#' ) )
           {
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
             QStringList myTokens = myInputLine.split( QRegExp( "\\s+" ), QString::SkipEmptyParts );
+#else
+            QStringList myTokens = myInputLine.split( QRegExp( "\\s+" ), Qt::SkipEmptyParts );
+#endif
             if ( myTokens.count() != 4 )
             {
               myImportError = true;
@@ -338,7 +342,11 @@ void QgsRasterTransparencyWidget::pbnImportTransparentPixelValues_clicked()
         {
           if ( !myInputLine.simplified().startsWith( '#' ) )
           {
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
             QStringList myTokens = myInputLine.split( QRegExp( "\\s+" ), QString::SkipEmptyParts );
+#else
+            QStringList myTokens = myInputLine.split( QRegExp( "\\s+" ), Qt::SkipEmptyParts );
+#endif
             if ( myTokens.count() != 3 && myTokens.count() != 2 ) // 2 for QGIS < 1.9 compatibility
             {
               myImportError = true;
@@ -634,8 +642,8 @@ void QgsRasterTransparencyWidget::setTransparencyCell( int row, int column, doub
     QString valueString;
     switch ( provider->sourceDataType( 1 ) )
     {
-      case Qgis::Float32:
-      case Qgis::Float64:
+      case Qgis::DataType::Float32:
+      case Qgis::DataType::Float64:
         lineEdit->setValidator( new QgsDoubleValidator( nullptr ) );
         if ( !std::isnan( value ) )
         {

@@ -15,6 +15,7 @@
 #include "qgstest.h"
 
 #include <QObject>
+#include <QSignalSpy>
 
 #include "qgsapplication.h"
 #include "qgsmarkersymbollayer.h"
@@ -27,6 +28,7 @@
 #include "qgsvectorlayer.h"
 #include "qgssymbollayerutils.h"
 #include "qgslayoutmanager.h"
+#include "qgsmarkersymbol.h"
 
 class TestQgsProject : public QObject
 {
@@ -595,11 +597,7 @@ void TestQgsProject::testSetGetCrs()
   QCOMPARE( ellipsoidChangedSpy.count(), 1 );
 
   QCOMPARE( p.crs(), QgsCoordinateReferenceSystem::fromEpsgId( 21781 ) );
-#if PROJ_VERSION_MAJOR>=6
   QCOMPARE( p.ellipsoid(), QStringLiteral( "EPSG:7004" ) );
-#else
-  QCOMPARE( p.ellipsoid(), QStringLiteral( "bessel" ) );
-#endif
 
   crsChangedSpy.clear();
   ellipsoidChangedSpy.clear();
@@ -614,11 +612,7 @@ void TestQgsProject::testSetGetCrs()
   QCOMPARE( ellipsoidChangedSpy.count(), 0 );
 
   QCOMPARE( p.crs(), QgsCoordinateReferenceSystem::fromEpsgId( 2056 ) );
-#if PROJ_VERSION_MAJOR>=6
   QCOMPARE( p.ellipsoid(), QStringLiteral( "EPSG:7004" ) );
-#else
-  QCOMPARE( p.ellipsoid(), QStringLiteral( "bessel" ) );
-#endif
 }
 
 void TestQgsProject::testCrsValidAfterReadingProjectFile()
@@ -692,11 +686,7 @@ void TestQgsProject::testCrsExpressions()
 
   QgsExpression e9( QStringLiteral( "@project_crs_ellipsoid" ) );
   r = e9.evaluate( &c );
-#if PROJ_VERSION_MAJOR>=6
   QCOMPARE( r.toString(), QString( "EPSG:7030" ) );
-#else
-  QCOMPARE( r.toString(), QString( "WGS84" ) );
-#endif
 }
 
 QGSTEST_MAIN( TestQgsProject )

@@ -174,8 +174,7 @@ void QgsGui::setWindowManager( QgsWindowManagerInterface *manager )
 
 QgsGui::HigFlags QgsGui::higFlags()
 {
-  QgsSettings settings;
-  if ( settings.value( QStringLiteral( "locale/userLocale" ), QString() ).toString().startsWith( QLatin1String( "en" ) ) )
+  if ( QgsApplication::settingsLocaleUserLocale.value().startsWith( QLatin1String( "en" ) ) )
   {
     return HigMenuTextIsTitleCase | HigDialogTitleIsTitleCase;
   }
@@ -331,7 +330,7 @@ bool QgsGui::pythonMacroAllowed( void ( *lambda )(), QgsMessageBar *messageBar )
             tr( "Security warning" ),
             tr( "Python macros cannot currently be run." ),
             btnEnableMacros,
-            Qgis::Warning,
+            Qgis::MessageLevel::Warning,
             0,
             messageBar );
 

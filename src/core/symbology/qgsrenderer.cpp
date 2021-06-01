@@ -36,10 +36,13 @@
 #include "qgspoint.h"
 #include "qgsproperty.h"
 #include "qgsapplication.h"
+#include "qgsmarkersymbol.h"
+#include "qgslinesymbol.h"
 
 #include <QDomElement>
 #include <QDomDocument>
 #include <QPolygonF>
+#include <QThread>
 
 QPointF QgsFeatureRenderer::_getPoint( QgsRenderContext &context, const QgsPoint &point )
 {
@@ -109,6 +112,11 @@ void QgsFeatureRenderer::stopRender( QgsRenderContext & )
 #ifdef QGISDEBUG
   Q_ASSERT_X( mThread == QThread::currentThread(), "QgsFeatureRenderer::stopRender", "stopRender called in a different thread - use a cloned renderer instead" );
 #endif
+}
+
+bool QgsFeatureRenderer::usesEmbeddedSymbols() const
+{
+  return false;
 }
 
 bool QgsFeatureRenderer::filterNeedsGeometry() const
@@ -467,12 +475,12 @@ bool QgsFeatureRenderer::accept( QgsStyleEntityVisitorInterface * ) const
   return true;
 }
 
-void QgsFeatureRenderer::convertSymbolSizeScale( QgsSymbol *symbol, QgsSymbol::ScaleMethod method, const QString &field )
+void QgsFeatureRenderer::convertSymbolSizeScale( QgsSymbol *symbol, Qgis::ScaleMethod method, const QString &field )
 {
-  if ( symbol->type() == QgsSymbol::Marker )
+  if ( symbol->type() == Qgis:: SymbolType::Marker )
   {
     QgsMarkerSymbol *s = static_cast<QgsMarkerSymbol *>( symbol );
-    if ( QgsSymbol::ScaleArea == QgsSymbol::ScaleMethod( method ) )
+    if ( Qgis::ScaleMethod::ScaleArea == method )
     {
       s->setDataDefinedSize( QgsProperty::fromExpression( "coalesce(sqrt(" + QString::number( s->size() ) + " * (" + field + ")),0)" ) );
     }
@@ -480,9 +488,9 @@ void QgsFeatureRenderer::convertSymbolSizeScale( QgsSymbol *symbol, QgsSymbol::S
     {
       s->setDataDefinedSize( QgsProperty::fromExpression( "coalesce(" + QString::number( s->size() ) + " * (" + field + "),0)" ) );
     }
-    s->setScaleMethod( QgsSymbol::ScaleDiameter );
+    s->setScaleMethod( Qgis::ScaleMethod::ScaleDiameter );
   }
-  else if ( symbol->type() == QgsSymbol::Line )
+  else if ( symbol->type() == Qgis::SymbolType::Line )
   {
     QgsLineSymbol *s = static_cast<QgsLineSymbol *>( symbol );
     s->setDataDefinedWidth( QgsProperty::fromExpression( "coalesce(" + QString::number( s->width() ) + " * (" + field + "),0)" ) );
@@ -491,7 +499,7 @@ void QgsFeatureRenderer::convertSymbolSizeScale( QgsSymbol *symbol, QgsSymbol::S
 
 void QgsFeatureRenderer::convertSymbolRotation( QgsSymbol *symbol, const QString &field )
 {
-  if ( symbol->type() == QgsSymbol::Marker )
+  if ( symbol->type() == Qgis::SymbolType::Marker )
   {
     QgsMarkerSymbol *s = static_cast<QgsMarkerSymbol *>( symbol );
     QgsProperty dd = QgsProperty::fromExpression( ( s->angle()

@@ -20,6 +20,10 @@
 #include "qgspostgresprovider.h"
 #include "qgsexception.h"
 #include "qgsapplication.h"
+#include "qgsfeedback.h"
+#include "qgsvectorlayer.h"
+#include <QRegularExpression>
+#include <QIcon>
 
 extern "C"
 {
@@ -109,17 +113,17 @@ void QgsPostgresProviderConnection::createVectorTable( const QString &schema,
   }
   QMap<int, int> map;
   QString errCause;
-  QgsVectorLayerExporter::ExportError errCode = QgsPostgresProvider::createEmptyLayer(
-        newUri.uri(),
-        fields,
-        wkbType,
-        srs,
-        overwrite,
-        &map,
-        &errCause,
-        options
-      );
-  if ( errCode != QgsVectorLayerExporter::ExportError::NoError )
+  Qgis::VectorExportResult res = QgsPostgresProvider::createEmptyLayer(
+                                   newUri.uri(),
+                                   fields,
+                                   wkbType,
+                                   srs,
+                                   overwrite,
+                                   &map,
+                                   &errCause,
+                                   options
+                                 );
+  if ( res != Qgis::VectorExportResult::Success )
   {
     throw QgsProviderConnectionException( QObject::tr( "An error occurred while creating the vector layer: %1" ).arg( errCause ) );
   }
@@ -244,7 +248,7 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsPostgresProviderConnection
       } );
     }
 
-    std::unique_ptr<QgsPostgresResult> res = qgis::make_unique<QgsPostgresResult>( conn->PQexec( sql ) );
+    std::unique_ptr<QgsPostgresResult> res = std::make_unique<QgsPostgresResult>( conn->PQexec( sql ) );
 
     if ( feedback )
     {
@@ -300,7 +304,7 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsPostgresProviderConnection
 
         const QList<QVariantList> typesResolved( executeSqlPrivate( QStringLiteral( "SELECT oid, typname FROM pg_type WHERE oid IN (%1)" ).arg( oids.join( ',' ) ), false, nullptr, pgconn ) );
         QgsStringMap oidTypeMap;
-        for ( const auto &typeRes : qgis::as_const( typesResolved ) )
+        for ( const auto &typeRes : std::as_const( typesResolved ) )
         {
           const QString oid { typeRes.constLast().toString() };
           if ( ! oidTypeMap.contains( oid ) )
@@ -387,7 +391,7 @@ QVariantList QgsPostgresProviderResultIterator::nextRowPrivate()
     if ( mResolveTypes )
     {
       const QVariant::Type vType { typeMap.value( colIdx, QVariant::Type::String ) };
-      QVariant val { result->PQgetvalue( mRowIndex, colIdx ) };
+      QVariant val = result->PQgetvalue( mRowIndex, colIdx );
       // Special case for bools: 'f' and 't'
       if ( vType == QVariant::Bool )
       {
@@ -452,7 +456,7 @@ void QgsPostgresProviderConnection::createSpatialIndex( const QString &schema, c
 
   const QString indexName = QStringLiteral( "sidx_%1_%2" ).arg( name, geometryColumnName );
   executeSql( QStringLiteral( "CREATE INDEX %1 ON %2.%3 USING GIST (%4);" )
-              .arg( indexName,
+              .arg( QgsPostgresConn::quotedIdentifier( indexName ),
                     QgsPostgresConn::quotedIdentifier( schema ),
                     QgsPostgresConn::quotedIdentifier( name ),
                     QgsPostgresConn::quotedIdentifier( geometryColumnName ) ) );
@@ -609,7 +613,7 @@ QList<QgsPostgresProviderConnection::TableProperty> QgsPostgresProviderConnectio
              )" ).arg( QgsPostgresConn::quotedIdentifier( pr.schemaName ),
                                                QgsPostgresConn::quotedIdentifier( pr.tableName ) ) );
               QStringList pkNames;
-              for ( const auto &pk : qgis::as_const( pks ) )
+              for ( const auto &pk : std::as_const( pks ) )
               {
                 pkNames.push_back( pk.first().toString() );
               }
@@ -656,7 +660,7 @@ QStringList QgsPostgresProviderConnection::schemas( ) const
     }
     else
     {
-      for ( const auto &s : qgis::as_const( schemaProperties ) )
+      for ( const auto &s : std::as_const( schemaProperties ) )
       {
         schemas.push_back( s.name );
       }
@@ -729,7 +733,7 @@ QIcon QgsPostgresProviderConnection::icon() const
 QList<QgsVectorDataProvider::NativeType> QgsPostgresProviderConnection::nativeTypes() const
 {
   QList<QgsVectorDataProvider::NativeType> types;
-  QgsPostgresConn *conn = QgsPostgresConnPool::instance()->acquireConnection( QgsDataSourceUri{ uri() }.connectionInfo( false ) );
+  QgsPostgresConn *conn = QgsPostgresConnPool::instance()->acquireConnection( QgsDataSourceUri{ uri() } .connectionInfo( false ) );
   if ( conn )
   {
     types = conn->nativeTypes();

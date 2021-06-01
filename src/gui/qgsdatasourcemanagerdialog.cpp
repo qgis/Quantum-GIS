@@ -71,7 +71,7 @@ QgsDataSourceManagerDialog::QgsDataSourceManagerDialog( QgsBrowserGuiModel *brow
     QgsAbstractDataSourceWidget *dlg = provider->createDataSourceWidget( this );
     if ( !dlg )
     {
-      QgsMessageLog::logMessage( tr( "Cannot get %1 select dialog from source select provider %2." ).arg( provider->name(), provider->providerKey() ), QStringLiteral( "DataSourceManager" ), Qgis::Critical );
+      QgsMessageLog::logMessage( tr( "Cannot get %1 select dialog from source select provider %2." ).arg( provider->name(), provider->providerKey() ), QStringLiteral( "DataSourceManager" ), Qgis::MessageLevel::Critical );
       continue;
     }
     addProviderDialog( dlg, provider->providerKey(), provider->text(), provider->icon( ), provider->toolTip( ) );
@@ -136,6 +136,11 @@ void QgsDataSourceManagerDialog::rasterLayerAdded( const QString &uri, const QSt
   emit addRasterLayer( uri, baseName, providerKey );
 }
 
+void QgsDataSourceManagerDialog::rasterLayersAdded( const QStringList &layersList )
+{
+  emit addRasterLayers( layersList );
+}
+
 void QgsDataSourceManagerDialog::vectorLayerAdded( const QString &vectorLayerPath, const QString &baseName, const QString &providerKey )
 {
   emit addVectorLayer( vectorLayerPath, baseName, providerKey );
@@ -188,6 +193,8 @@ void QgsDataSourceManagerDialog::makeConnections( QgsAbstractDataSourceWidget *d
   {
     addRasterLayer( uri, baseName, providerKey );
   } );
+  connect( dlg, &QgsAbstractDataSourceWidget::addRasterLayers,
+           this, &QgsDataSourceManagerDialog::rasterLayersAdded );
   // Mesh
   connect( dlg, &QgsAbstractDataSourceWidget::addMeshLayer, this, &QgsDataSourceManagerDialog::addMeshLayer );
   // Vector tile

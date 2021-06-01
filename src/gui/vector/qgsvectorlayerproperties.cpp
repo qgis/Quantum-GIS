@@ -463,7 +463,7 @@ void QgsVectorLayerProperties::toggleEditing()
   setPbnQueryBuilderEnabled();
 }
 
-void QgsVectorLayerProperties::addPropertiesPageFactory( QgsMapLayerConfigWidgetFactory *factory )
+void QgsVectorLayerProperties::addPropertiesPageFactory( const QgsMapLayerConfigWidgetFactory *factory )
 {
   if ( !factory->supportsLayer( mLayer ) || !factory->supportLayerPropertiesDialog() )
   {
@@ -635,7 +635,8 @@ void QgsVectorLayerProperties::apply()
     const QString newSource = mSourceWidget->sourceUri();
     if ( newSource != mLayer->source() )
     {
-      mLayer->setDataSource( newSource, mLayer->name(), mLayer->providerType(), QgsDataProvider::ProviderOptions() );
+      mLayer->setDataSource( newSource, mLayer->name(), mLayer->providerType(),
+                             QgsDataProvider::ProviderOptions(), QgsDataProvider::ReadFlags() );
     }
   }
 
@@ -844,7 +845,7 @@ void QgsVectorLayerProperties::onCancel()
     for ( const QgsVectorLayerJoinInfo &info : constVectorJoins )
       mLayer->removeJoin( info.joinLayerId() );
 
-    for ( const QgsVectorLayerJoinInfo &info : qgis::as_const( mOldJoins ) )
+    for ( const QgsVectorLayerJoinInfo &info : std::as_const( mOldJoins ) )
       mLayer->addJoin( info );
   }
 
@@ -864,7 +865,6 @@ void QgsVectorLayerProperties::onCancel()
     int errorLine, errorColumn;
     doc.setContent( mOldStyle.xmlData(), false, &myMessage, &errorLine, &errorColumn );
     mLayer->importNamedStyle( doc, myMessage );
-    syncToLayer();
   }
 }
 
@@ -944,7 +944,10 @@ void QgsVectorLayerProperties::loadDefaultStyle_clicked()
   QString msg;
   bool defaultLoadedFlag = false;
 
-  if ( mLayer->dataProvider()->isSaveAndLoadStyleToDatabaseSupported() )
+  const QgsVectorDataProvider *provider = mLayer->dataProvider();
+  if ( !provider )
+    return;
+  if ( provider->isSaveAndLoadStyleToDatabaseSupported() )
   {
     QMessageBox askToUser;
     askToUser.setText( tr( "Load default style from: " ) );
@@ -999,7 +1002,10 @@ void QgsVectorLayerProperties::saveDefaultStyle_clicked()
 {
   apply();
   QString errorMsg;
-  if ( mLayer->dataProvider()->isSaveAndLoadStyleToDatabaseSupported() )
+  const QgsVectorDataProvider *provider = mLayer->dataProvider();
+  if ( !provider )
+    return;
+  if ( provider->isSaveAndLoadStyleToDatabaseSupported() )
   {
     QMessageBox askToUser;
     askToUser.setText( tr( "Save default style to: " ) );
@@ -1137,6 +1143,8 @@ void QgsVectorLayerProperties::loadDefaultMetadata()
 
 void QgsVectorLayerProperties::saveStyleAs()
 {
+  if ( !mLayer->dataProvider() )
+    return;
   QgsVectorLayerSaveStyleDialog dlg( mLayer );
   QgsSettings settings;
 
@@ -1183,11 +1191,11 @@ void QgsVectorLayerProperties::saveStyleAs()
 
         if ( !msgError.isNull() )
         {
-          mMessageBar->pushMessage( infoWindowTitle, msgError, Qgis::Warning );
+          mMessageBar->pushMessage( infoWindowTitle, msgError, Qgis::MessageLevel::Warning );
         }
         else
         {
-          mMessageBar->pushMessage( infoWindowTitle, tr( "Style saved" ), Qgis::Success );
+          mMessageBar->pushMessage( infoWindowTitle, tr( "Style saved" ), Qgis::MessageLevel::Success );
         }
         break;
       }
@@ -1222,7 +1230,7 @@ void QgsVectorLayerProperties::saveMultipleStylesAs()
     if ( ! stylesSelected.isEmpty() )
     {
       int styleIndex = 0;
-      for ( const QString &styleName : qgis::as_const( stylesSelected ) )
+      for ( const QString &styleName : std::as_const( stylesSelected ) )
       {
         bool defaultLoadedFlag = false;
 
@@ -1296,12 +1304,12 @@ void QgsVectorLayerProperties::saveMultipleStylesAs()
 
             if ( !msgError.isNull() )
             {
-              mMessageBar->pushMessage( infoWindowTitle, msgError, Qgis::Warning );
+              mMessageBar->pushMessage( infoWindowTitle, msgError, Qgis::MessageLevel::Warning );
             }
             else
             {
               mMessageBar->pushMessage( infoWindowTitle, tr( "Style '%1' saved" ).arg( styleName ),
-                                        Qgis::Success );
+                                        Qgis::MessageLevel::Success );
             }
             break;
           }
@@ -1517,7 +1525,7 @@ void QgsVectorLayerProperties::addJoinToTreeWidget( const QgsVectorLayerJoinInfo
     return;
   }
 
-  joinItem->setText( 0, QStringLiteral( "Join layer" ) );
+  joinItem->setText( 0, tr( "Join layer" ) );
   if ( mLayer->auxiliaryLayer() && mLayer->auxiliaryLayer()->id() == join.joinLayerId() )
   {
     return;
@@ -1533,53 +1541,53 @@ void QgsVectorLayerProperties::addJoinToTreeWidget( const QgsVectorLayerJoinInfo
   joinItem->setData( 0, Qt::UserRole, join.joinLayerId() );
 
   QTreeWidgetItem *childJoinField = new QTreeWidgetItem();
-  childJoinField->setText( 0, QStringLiteral( "Join field" ) );
+  childJoinField->setText( 0, tr( "Join field" ) );
   childJoinField->setText( 1, join.joinFieldName() );
   childJoinField->setFlags( Qt::ItemIsEnabled );
   joinItem->addChild( childJoinField );
 
   QTreeWidgetItem *childTargetField = new QTreeWidgetItem();
-  childTargetField->setText( 0, QStringLiteral( "Target field" ) );
+  childTargetField->setText( 0, tr( "Target field" ) );
   childTargetField->setText( 1, join.targetFieldName() );
   joinItem->addChild( childTargetField );
 
   QTreeWidgetItem *childMemCache = new QTreeWidgetItem();
-  childMemCache->setText( 0, QStringLiteral( "Cache join layer in virtual memory" ) );
+  childMemCache->setText( 0, tr( "Cache join layer in virtual memory" ) );
   if ( join.isUsingMemoryCache() )
     childMemCache->setText( 1, QChar( 0x2714 ) );
   joinItem->addChild( childMemCache );
 
   QTreeWidgetItem *childDynForm = new QTreeWidgetItem();
-  childDynForm->setText( 0, QStringLiteral( "Dynamic form" ) );
+  childDynForm->setText( 0, tr( "Dynamic form" ) );
   if ( join.isDynamicFormEnabled() )
     childDynForm->setText( 1, QChar( 0x2714 ) );
   joinItem->addChild( childDynForm );
 
   QTreeWidgetItem *childEditable = new QTreeWidgetItem();
-  childEditable->setText( 0, QStringLiteral( "Editable join layer" ) );
+  childEditable->setText( 0, tr( "Editable join layer" ) );
   if ( join.isEditable() )
     childEditable->setText( 1, QChar( 0x2714 ) );
   joinItem->addChild( childEditable );
 
   QTreeWidgetItem *childUpsert = new QTreeWidgetItem();
-  childUpsert->setText( 0, QStringLiteral( "Upsert on edit" ) );
+  childUpsert->setText( 0, tr( "Upsert on edit" ) );
   if ( join.hasUpsertOnEdit() )
     childUpsert->setText( 1, QChar( 0x2714 ) );
   joinItem->addChild( childUpsert );
 
   QTreeWidgetItem *childCascade = new QTreeWidgetItem();
-  childCascade->setText( 0, QStringLiteral( "Delete cascade" ) );
+  childCascade->setText( 0, tr( "Delete cascade" ) );
   if ( join.hasCascadedDelete() )
     childCascade->setText( 1, QChar( 0x2714 ) );
   joinItem->addChild( childCascade );
 
   QTreeWidgetItem *childPrefix = new QTreeWidgetItem();
-  childPrefix->setText( 0, QStringLiteral( "Custom field name prefix" ) );
+  childPrefix->setText( 0, tr( "Custom field name prefix" ) );
   childPrefix->setText( 1, join.prefix() );
   joinItem->addChild( childPrefix );
 
   QTreeWidgetItem *childFields = new QTreeWidgetItem();
-  childFields->setText( 0, QStringLiteral( "Joined fields" ) );
+  childFields->setText( 0, tr( "Joined fields" ) );
   const QStringList *list = join.joinFieldNamesSubset();
   if ( list )
     childFields->setText( 1, QString::number( list->count() ) );
@@ -1857,7 +1865,8 @@ void QgsVectorLayerProperties::optionsStackedWidget_CurrentChanged( int index )
 
 void QgsVectorLayerProperties::mSimplifyDrawingGroupBox_toggled( bool checked )
 {
-  if ( !( mLayer->dataProvider()->capabilities() & QgsVectorDataProvider::SimplifyGeometries ) )
+  const QgsVectorDataProvider *provider = mLayer->dataProvider();
+  if ( !( provider && ( provider->capabilities() & QgsVectorDataProvider::SimplifyGeometries ) != 0 ) )
   {
     mSimplifyDrawingAtProvider->setEnabled( false );
   }
@@ -2101,6 +2110,6 @@ void QgsVectorLayerProperties::deleteAuxiliaryField( int index )
     const QString title = QObject::tr( "Delete Auxiliary Field" );
     const QString errors = mLayer->auxiliaryLayer()->commitErrors().join( QLatin1String( "\n  " ) );
     const QString msg = QObject::tr( "Unable to remove auxiliary field (%1)" ).arg( errors );
-    mMessageBar->pushMessage( title, msg, Qgis::Warning );
+    mMessageBar->pushMessage( title, msg, Qgis::MessageLevel::Warning );
   }
 }

@@ -4,6 +4,10 @@
 set(QGIS_ANALYSIS_SRCS
   qgsanalysis.cpp
 
+  georeferencing/qgsgcpgeometrytransformer.cpp
+  georeferencing/qgsgcptransformer.cpp
+  georeferencing/qgsleastsquares.cpp
+
   interpolation/qgsgridfilewriter.cpp
   interpolation/qgsidwinterpolator.cpp
   interpolation/qgsinterpolator.cpp
@@ -33,6 +37,7 @@ set(QGIS_ANALYSIS_SRCS
   processing/qgsalgorithmassignprojection.cpp
   processing/qgsalgorithmattributeindex.cpp
   processing/qgsalgorithmbatchgeocode.cpp
+  processing/qgsalgorithmbatchnominatimgeocode.cpp
   processing/qgsalgorithmboundary.cpp
   processing/qgsalgorithmboundingbox.cpp
   processing/qgsalgorithmbuffer.cpp
@@ -135,6 +140,7 @@ set(QGIS_ANALYSIS_SRCS
   processing/qgsalgorithmrandompointsonlines.cpp
   processing/qgsalgorithmrandomraster.cpp
   processing/qgsalgorithmrasterfrequencybycomparisonoperator.cpp
+  processing/qgsalgorithmrasterlayerproperties.cpp
   processing/qgsalgorithmrasterlayeruniquevalues.cpp
   processing/qgsalgorithmrasterlogicalop.cpp
   processing/qgsalgorithmrasterize.cpp
@@ -283,6 +289,9 @@ set(QGIS_ANALYSIS_SRCS
 set(QGIS_ANALYSIS_HDRS
   qgsanalysis.h
 
+  georeferencing/qgsgcpgeometrytransformer.h
+  georeferencing/qgsgcptransformer.h
+
   interpolation/Bezier3D.h
   interpolation/CloughTocherInterpolator.h
   interpolation/qgsdualedgetriangulation.h
@@ -314,6 +323,7 @@ set(QGIS_ANALYSIS_HDRS
   network/qgsvectorlayerdirector.h
 
   processing/qgsalgorithmbatchgeocode.h
+  processing/qgsalgorithmbatchnominatimgeocode.h
   processing/qgsalgorithmfiledownloader.h
   processing/qgsalgorithmimportphotos.h
   processing/qgsnativealgorithms.h
@@ -394,6 +404,10 @@ include_directories(SYSTEM ${SQLITE3_INCLUDE_DIR})
 include_directories(BEFORE raster)
 include_directories(BEFORE mesh)
 
+if(HAVE_GSL)
+  include_directories(SYSTEM ${GSL_INCLUDE_DIR})
+endif()
+
 ADD_FLEX_FILES_PREFIX(QGIS_ANALYSIS_SRCS raster raster/qgsrastercalclexer.ll)
 ADD_BISON_FILES_PREFIX(QGIS_ANALYSIS_SRCS raster raster/qgsrastercalcparser.yy)
 
@@ -435,8 +449,20 @@ endif()
 
 add_library(qgis_analysis ${LIBRARY_TYPE} ${QGIS_ANALYSIS_SRCS} ${QGIS_ANALYSIS_HDRS})
 
+# require c++17
+target_compile_features(qgis_analysis PRIVATE cxx_std_17)
+
+# Exiv still uses std::auto_ptr
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_definitions(qgis_analysis PUBLIC _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
+endif()
+if (MSVC)
+  target_compile_definitions(qgis_analysis PUBLIC _HAS_AUTO_PTR_ETC=1)
+endif()
+
 target_include_directories(qgis_analysis PUBLIC
   ${CMAKE_SOURCE_DIR}/src/analysis
+  ${CMAKE_SOURCE_DIR}/src/analysis/georeferencing
   ${CMAKE_SOURCE_DIR}/src/analysis/interpolation
   ${CMAKE_SOURCE_DIR}/src/analysis/mesh
   ${CMAKE_SOURCE_DIR}/src/analysis/network
@@ -498,6 +524,10 @@ target_link_libraries(
   qgis_core
   ${EXIV2_LIBRARY}
   )
+
+if(HAVE_GSL)
+  target_link_libraries(qgis_analysis ${GSL_LIBRARIES})
+endif()
 
 if(HAVE_OPENCL)
     target_link_libraries(qgis_analysis ${OpenCL_LIBRARIES})

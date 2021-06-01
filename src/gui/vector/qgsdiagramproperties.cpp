@@ -44,6 +44,8 @@
 #include "qgsexpressioncontextutils.h"
 #include "qgspropertytransformer.h"
 #include "qgspainteffectregistry.h"
+#include "qgspainteffect.h"
+#include "qgslinesymbol.h"
 
 #include <QList>
 #include <QMessageBox>
@@ -118,7 +120,7 @@ QgsDiagramProperties::QgsDiagramProperties( QgsVectorLayer *layer, QWidget *pare
   mDiagramTypeComboBox->addItem( pix, tr( "Stacked Bars" ), DIAGRAM_NAME_STACKED );
   mDiagramTypeComboBox->blockSignals( false );
 
-  mAxisLineStyleButton->setSymbolType( QgsSymbol::Line );
+  mAxisLineStyleButton->setSymbolType( Qgis::SymbolType::Line );
   mAxisLineStyleButton->setDialogTitle( tr( "Axis Line Symbol" ) );
 
   mScaleRangeWidget->setMapCanvas( mMapCanvas );
@@ -141,11 +143,7 @@ QgsDiagramProperties::QgsDiagramProperties( QgsVectorLayer *layer, QWidget *pare
   mDiagramAttributesTreeWidget->setItemDelegateForColumn( ColumnAttributeExpression, new EditBlockerDelegate( this ) );
   mDiagramAttributesTreeWidget->setItemDelegateForColumn( ColumnColor, new QgsColorSwatchDelegate( this ) );
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
-  mDiagramAttributesTreeWidget->setColumnWidth( ColumnColor, Qgis::UI_SCALE_FACTOR * fontMetrics().width( 'X' ) * 6.6 );
-#else
   mDiagramAttributesTreeWidget->setColumnWidth( ColumnColor, Qgis::UI_SCALE_FACTOR * fontMetrics().horizontalAdvance( 'X' ) * 6.6 );
-#endif
 
   connect( mFixedSizeRadio, &QRadioButton::toggled, this, &QgsDiagramProperties::scalingTypeChanged );
   connect( mAttributeBasedScalingRadio, &QRadioButton::toggled, this, &QgsDiagramProperties::scalingTypeChanged );
@@ -805,19 +803,19 @@ void QgsDiagramProperties::apply()
 
   if ( mDiagramType == DIAGRAM_NAME_TEXT )
   {
-    diagram = qgis::make_unique< QgsTextDiagram >();
+    diagram = std::make_unique< QgsTextDiagram >();
   }
   else if ( mDiagramType == DIAGRAM_NAME_PIE )
   {
-    diagram = qgis::make_unique< QgsPieDiagram >();
+    diagram = std::make_unique< QgsPieDiagram >();
   }
   else if ( mDiagramType == DIAGRAM_NAME_STACKED )
   {
-    diagram = qgis::make_unique< QgsStackedBarDiagram >();
+    diagram = std::make_unique< QgsStackedBarDiagram >();
   }
   else // if ( diagramType == DIAGRAM_NAME_HISTOGRAM )
   {
-    diagram = qgis::make_unique< QgsHistogramDiagram >();
+    diagram = std::make_unique< QgsHistogramDiagram >();
   }
 
   QgsDiagramSettings ds;

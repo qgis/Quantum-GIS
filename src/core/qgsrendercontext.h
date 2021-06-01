@@ -34,7 +34,6 @@
 #include "qgsdistancearea.h"
 #include "qgscoordinatetransformcontext.h"
 #include "qgspathresolver.h"
-#include "qgssymbollayerreference.h"
 #include "qgstemporalrangeobject.h"
 
 class QPainter;
@@ -49,7 +48,8 @@ class QgsMapClippingRegion;
 
 /**
  * \ingroup core
- * Contains information about the context of a rendering operation.
+ * \brief Contains information about the context of a rendering operation.
+ *
  * The context of a rendering operation defines properties such as
  * the conversion ratio between screen and map units, the extents
  * to be rendered etc.
@@ -333,6 +333,14 @@ class CORE_EXPORT QgsRenderContext : public QgsTemporalRangeObject
     double scaleFactor() const {return mScaleFactor;}
 
     /**
+     * Returns the targeted DPI for rendering.
+     *
+     * \see setDpiTarget()
+     * \since QGIS 3.20
+     */
+    double dpiTarget() const {return mDpiTarget;}
+
+    /**
      * Returns TRUE if the rendering operation has been stopped and any ongoing
      * rendering should be canceled immediately.
      *
@@ -474,6 +482,14 @@ class CORE_EXPORT QgsRenderContext : public QgsTemporalRangeObject
      * \see scaleFactor()
      */
     void setScaleFactor( double factor ) {mScaleFactor = factor;}
+
+    /**
+     * Sets the targeted \a dpi for rendering.
+     *
+     * \see dpiTarget()
+     * \since QGIS 3.20
+     */
+    void setDpiTarget( double dpi ) {mDpiTarget = dpi;}
 
     /**
      * Sets the renderer map scale. This should match the desired scale denominator
@@ -927,6 +943,9 @@ class CORE_EXPORT QgsRenderContext : public QgsTemporalRangeObject
     //! Factor to scale line widths and point marker sizes
     double mScaleFactor = 1.0;
 
+    //! Targeted DPI
+    double mDpiTarget = -1.0;
+
     //! Map scale
     double mRendererScale = 1.0;
 
@@ -982,7 +1001,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( QgsRenderContext::Flags )
 /**
  * \ingroup core
  *
- * Scoped object for temporary replacement of a QgsRenderContext destination painter.
+ * \brief Scoped object for temporary replacement of a QgsRenderContext destination painter.
  *
  * Temporarily swaps out the destination QPainter object for a QgsRenderContext for the lifetime of the object,
  * before replacing it to the original painter on destruction.
@@ -1038,7 +1057,7 @@ class QgsScopedRenderContextPainterSwap
 /**
  * \ingroup core
  *
- * Scoped object for temporary scaling of a QgsRenderContext for millimeter based rendering.
+ * \brief Scoped object for temporary scaling of a QgsRenderContext for millimeter based rendering.
  *
  * Temporarily scales the destination QPainter for a QgsRenderContext to use millimeter based units for the lifetime of the object,
  * before returning it to pixel based units on destruction.
@@ -1082,7 +1101,7 @@ class QgsScopedRenderContextScaleToMm
 /**
  * \ingroup core
  *
- * Scoped object for temporary scaling of a QgsRenderContext for pixel based rendering.
+ * \brief Scoped object for temporary scaling of a QgsRenderContext for pixel based rendering.
  *
  * Temporarily scales the destination QPainter for a QgsRenderContext to use pixel based units for the lifetime of the object,
  * before returning it to millimeter based units on destruction.
@@ -1126,7 +1145,7 @@ class QgsScopedRenderContextScaleToPixels
 /**
  * \ingroup core
  *
- * Scoped object for saving and restoring a QPainter object's state.
+ * \brief Scoped object for saving and restoring a QPainter object's state.
  *
  * Temporarily saves the QPainter state for the lifetime of the object, before restoring it
  * on destruction.

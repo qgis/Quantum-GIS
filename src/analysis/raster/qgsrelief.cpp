@@ -36,11 +36,11 @@ QgsRelief::QgsRelief( const QString &inputFile, const QString &outputFile, const
   : mInputFile( inputFile )
   , mOutputFile( outputFile )
   , mOutputFormat( outputFormat )
-  , mSlopeFilter( qgis::make_unique< QgsSlopeFilter >( inputFile, outputFile, outputFormat ) )
-  , mAspectFilter( qgis::make_unique< QgsAspectFilter > ( inputFile, outputFile, outputFormat ) )
-  , mHillshadeFilter285( qgis::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 285, 30 ) )
-  , mHillshadeFilter300( qgis::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 300, 30 ) )
-  , mHillshadeFilter315( qgis::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 315, 30 ) )
+  , mSlopeFilter( std::make_unique< QgsSlopeFilter >( inputFile, outputFile, outputFormat ) )
+  , mAspectFilter( std::make_unique< QgsAspectFilter > ( inputFile, outputFile, outputFormat ) )
+  , mHillshadeFilter285( std::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 285, 30 ) )
+  , mHillshadeFilter300( std::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 300, 30 ) )
+  , mHillshadeFilter315( std::make_unique< QgsHillshadeFilter >( inputFile, outputFile, outputFormat, 315, 30 ) )
 {
   /*mReliefColors = calculateOptimizedReliefClasses();
     setDefaultReliefColors();*/
@@ -543,6 +543,9 @@ bool QgsRelief::exportFrequencyDistributionToCsv( const QString &file )
   }
 
   QTextStream outstream( &outFile );
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  outstream.setCodec( "UTF-8" );
+#endif
   for ( int i = 0; i < 252; ++i )
   {
     outstream << QString::number( i ) + ',' + QString::number( frequency[i] ) << endl;

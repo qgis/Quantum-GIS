@@ -20,6 +20,8 @@
 #include "qgsmimedatautils.h"
 #include "qgsdataitem.h"
 #include "qgsbrowsermodel.h"
+#include "qgslayeritem.h"
+#include "qgsdirectoryitem.h"
 #include <memory>
 
 class TestQgsFileWidget: public QObject
@@ -119,7 +121,7 @@ void TestQgsFileWidget::testDroppedFiles()
 
   QgsBrowserModel m;
   m.initialize();
-  QgsLayerItem *layerItem = new QgsLayerItem( nullptr, QStringLiteral( "Test" ), QString(), TEST_DATA_DIR + QStringLiteral( "/mesh/quad_and_triangle.txt" ), QgsLayerItem::Mesh, "mdal" );
+  QgsLayerItem *layerItem = new QgsLayerItem( nullptr, QStringLiteral( "Test" ), QString(), TEST_DATA_DIR + QStringLiteral( "/mesh/quad_and_triangle.txt" ), Qgis::BrowserLayerType::Mesh, "mdal" );
   m.driveItems().first()->addChild( layerItem );
   mime.reset( m.mimeData( QModelIndexList() << m.findItem( layerItem ) ) );
   event.reset( new QDropEvent( QPointF( 1, 1 ), Qt::CopyAction, mime.get(), Qt::LeftButton, Qt::NoModifier ) );
@@ -127,7 +129,7 @@ void TestQgsFileWidget::testDroppedFiles()
   QCOMPARE( w->lineEdit()->text(), QString( QString( TEST_DATA_DIR ) + QStringLiteral( "/mesh/quad_and_triangle.txt" ) ) );
 
   // plain text should also be permitted
-  mime = qgis::make_unique< QMimeData >();
+  mime = std::make_unique< QMimeData >();
   mime->setText( TEST_DATA_DIR + QStringLiteral( "/mesh/quad_and_triangle.2dm" ) );
   event.reset( new QDropEvent( QPointF( 1, 1 ), Qt::CopyAction, mime.get(), Qt::LeftButton,  Qt::NoModifier ) );
   qobject_cast< QgsFileDropEdit * >( w->lineEdit() )->dropEvent( event.get() );

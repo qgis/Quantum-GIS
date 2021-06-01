@@ -59,9 +59,13 @@ QgsFieldCalculator::QgsFieldCalculator( QgsVectorLayer *vl, QWidget *parent )
 
   if ( !vl )
     return;
+  QgsVectorDataProvider *dataProvider = vl->dataProvider();
+  if ( !dataProvider )
+    return;
 
-  mCanAddAttribute = vl->dataProvider()->capabilities() & QgsVectorDataProvider::AddAttributes;
-  mCanChangeAttributeValue = vl->dataProvider()->capabilities() & QgsVectorDataProvider::ChangeAttributeValues;
+  const QgsVectorDataProvider::Capabilities caps = dataProvider->capabilities();
+  mCanAddAttribute = caps & QgsVectorDataProvider::AddAttributes;
+  mCanChangeAttributeValue = caps & QgsVectorDataProvider::ChangeAttributeValues;
 
   QgsExpressionContext expContext( QgsExpressionContextUtils::globalProjectLayerScopes( mVectorLayer ) );
 
@@ -289,7 +293,7 @@ void QgsFieldCalculator::accept()
     }
     QgsFeatureIterator fit = mVectorLayer->getFeatures( req );
 
-    std::unique_ptr< QgsScopedProxyProgressTask > task = qgis::make_unique< QgsScopedProxyProgressTask >( tr( "Calculating field" ) );
+    std::unique_ptr< QgsScopedProxyProgressTask > task = std::make_unique< QgsScopedProxyProgressTask >( tr( "Calculating field" ) );
     long long count = mOnlyUpdateSelectedCheckBox->isChecked() ? mVectorLayer->selectedFeatureCount() : mVectorLayer->featureCount();
     long long i = 0;
     while ( fit.nextFeature( feature ) )

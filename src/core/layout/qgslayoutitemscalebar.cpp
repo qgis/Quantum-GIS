@@ -35,6 +35,8 @@
 #include "qgsnumericformatregistry.h"
 #include "qgslinesymbollayer.h"
 #include "qgsfillsymbollayer.h"
+#include "qgslinesymbol.h"
+#include "qgsfillsymbol.h"
 
 #include <QDomDocument>
 #include <QDomElement>
@@ -464,7 +466,7 @@ void QgsLayoutItemScaleBar::setLineCapStyle( Qt::PenCapStyle style )
 void QgsLayoutItemScaleBar::applyDefaultSettings()
 {
   //style
-  mStyle = qgis::make_unique< QgsSingleBoxScaleBarRenderer >();
+  mStyle = std::make_unique< QgsSingleBoxScaleBarRenderer >();
 
   //default to no background
   setBackgroundEnabled( false );
@@ -929,8 +931,8 @@ bool QgsLayoutItemScaleBar::readPropertiesFromElement( const QDomElement &itemEl
   if ( !foundLineSymbol )
   {
     // old project compatibility
-    std::unique_ptr< QgsLineSymbol > lineSymbol = qgis::make_unique< QgsLineSymbol >();
-    std::unique_ptr< QgsSimpleLineSymbolLayer > lineSymbolLayer = qgis::make_unique< QgsSimpleLineSymbolLayer >();
+    std::unique_ptr< QgsLineSymbol > lineSymbol = std::make_unique< QgsLineSymbol >();
+    std::unique_ptr< QgsSimpleLineSymbolLayer > lineSymbolLayer = std::make_unique< QgsSimpleLineSymbolLayer >();
     lineSymbolLayer->setWidth( itemElem.attribute( QStringLiteral( "outlineWidth" ), QStringLiteral( "0.3" ) ).toDouble() );
     lineSymbolLayer->setWidthUnit( QgsUnitTypes::RenderMillimeters );
     lineSymbolLayer->setPenJoinStyle( QgsSymbolLayerUtils::decodePenJoinStyle( itemElem.attribute( QStringLiteral( "lineJoinStyle" ), QStringLiteral( "miter" ) ) ) );
@@ -1022,8 +1024,8 @@ bool QgsLayoutItemScaleBar::readPropertiesFromElement( const QDomElement &itemEl
   if ( !foundFillSymbol1 )
   {
     // old project compatibility
-    std::unique_ptr< QgsFillSymbol > fillSymbol = qgis::make_unique< QgsFillSymbol >();
-    std::unique_ptr< QgsSimpleFillSymbolLayer > fillSymbolLayer = qgis::make_unique< QgsSimpleFillSymbolLayer >();
+    std::unique_ptr< QgsFillSymbol > fillSymbol = std::make_unique< QgsFillSymbol >();
+    std::unique_ptr< QgsSimpleFillSymbolLayer > fillSymbolLayer = std::make_unique< QgsSimpleFillSymbolLayer >();
     fillSymbolLayer->setStrokeStyle( Qt::NoPen );
 
     //fill color
@@ -1073,8 +1075,8 @@ bool QgsLayoutItemScaleBar::readPropertiesFromElement( const QDomElement &itemEl
   if ( !foundFillSymbol2 )
   {
     // old project compatibility
-    std::unique_ptr< QgsFillSymbol > fillSymbol = qgis::make_unique< QgsFillSymbol >();
-    std::unique_ptr< QgsSimpleFillSymbolLayer > fillSymbolLayer = qgis::make_unique< QgsSimpleFillSymbolLayer >();
+    std::unique_ptr< QgsFillSymbol > fillSymbol = std::make_unique< QgsFillSymbol >();
+    std::unique_ptr< QgsSimpleFillSymbolLayer > fillSymbolLayer = std::make_unique< QgsSimpleFillSymbolLayer >();
     fillSymbolLayer->setStrokeStyle( Qt::NoPen );
 
     //fill color 2

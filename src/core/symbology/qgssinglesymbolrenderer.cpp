@@ -30,6 +30,9 @@
 #include "qgspainteffectregistry.h"
 #include "qgsproperty.h"
 #include "qgsstyleentityvisitor.h"
+#include "qgslinesymbol.h"
+#include "qgsmarkersymbol.h"
+#include "qgsfillsymbol.h"
 
 #include <QDomDocument>
 #include <QDomElement>
@@ -251,15 +254,15 @@ QgsFeatureRenderer *QgsSingleSymbolRenderer::createFromSld( QDomElement &element
   switch ( geomType )
   {
     case QgsWkbTypes::LineGeometry:
-      symbol = qgis::make_unique< QgsLineSymbol >( layers );
+      symbol = std::make_unique< QgsLineSymbol >( layers );
       break;
 
     case QgsWkbTypes::PolygonGeometry:
-      symbol = qgis::make_unique< QgsFillSymbol >( layers );
+      symbol = std::make_unique< QgsFillSymbol >( layers );
       break;
 
     case QgsWkbTypes::PointGeometry:
-      symbol = qgis::make_unique< QgsMarkerSymbol >( layers );
+      symbol = std::make_unique< QgsMarkerSymbol >( layers );
       break;
 
     default:
@@ -312,7 +315,7 @@ QDomElement QgsSingleSymbolRenderer::save( QDomDocument &doc, const QgsReadWrite
 
 QgsLegendSymbolList QgsSingleSymbolRenderer::legendSymbolItems() const
 {
-  if ( mDataDefinedSizeLegend && mSymbol->type() == QgsSymbol::Marker )
+  if ( mDataDefinedSizeLegend && mSymbol->type() == Qgis::SymbolType::Marker )
   {
     const QgsMarkerSymbol *symbol = static_cast<const QgsMarkerSymbol *>( mSymbol.get() );
     QgsProperty sizeDD( symbol->dataDefinedSize() );

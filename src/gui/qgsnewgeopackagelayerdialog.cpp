@@ -21,7 +21,6 @@
 
 #include "qgis.h"
 #include "qgsapplication.h"
-#include "qgsdataitem.h"
 #include "qgsproviderregistry.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
@@ -33,6 +32,7 @@
 #include "qgsogrutils.h"
 #include "qgsgui.h"
 #include "qgsproviderconnectionmodel.h"
+#include "qgsiconutils.h"
 
 #include <QPushButton>
 #include <QLineEdit>
@@ -72,7 +72,7 @@ QgsNewGeoPackageLayerDialog::QgsNewGeoPackageLayerDialog( QWidget *parent, Qt::W
   const auto addGeomItem = [this]( OGRwkbGeometryType ogrGeomType )
   {
     QgsWkbTypes::Type qgsType = QgsOgrUtils::ogrGeometryTypeToQgsWkbType( ogrGeomType );
-    mGeometryTypeBox->addItem( QgsLayerItem::iconForWkbType( qgsType ), QgsWkbTypes::translatedDisplayString( qgsType ), ogrGeomType );
+    mGeometryTypeBox->addItem( QgsIconUtils::iconForWkbType( qgsType ), QgsWkbTypes::translatedDisplayString( qgsType ), ogrGeomType );
   };
 
   addGeomItem( wkbNone );
@@ -100,6 +100,7 @@ QgsNewGeoPackageLayerDialog::QgsNewGeoPackageLayerDialog( QWidget *parent, Qt::W
   mFeatureIdColumnEdit->setPlaceholderText( QStringLiteral( DEFAULT_OGR_FID_COLUMN_TITLE ) );
   mCheckBoxCreateSpatialIndex->setEnabled( false );
   mCrsSelector->setEnabled( false );
+  mCrsSelector->setShowAccuracyWarnings( true );
 
   mFieldTypeBox->addItem( QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldText.svg" ) ), tr( "Text Data" ), "text" );
   mFieldTypeBox->addItem( QgsApplication::getThemeIcon( QStringLiteral( "/mIconFieldInteger.svg" ) ), tr( "Whole Number (integer)" ), "integer" );
@@ -515,7 +516,7 @@ bool QgsNewGeoPackageLayerDialog::apply()
   QString uri( QStringLiteral( "%1|layername=%2" ).arg( fileName, tableName ) );
   QString userVisiblelayerName( layerIdentifier.isEmpty() ? tableName : layerIdentifier );
   QgsVectorLayer::LayerOptions layerOptions { QgsProject::instance()->transformContext() };
-  std::unique_ptr< QgsVectorLayer > layer = qgis::make_unique< QgsVectorLayer >( uri, userVisiblelayerName, QStringLiteral( "ogr" ), layerOptions );
+  std::unique_ptr< QgsVectorLayer > layer = std::make_unique< QgsVectorLayer >( uri, userVisiblelayerName, QStringLiteral( "ogr" ), layerOptions );
   if ( layer->isValid() )
   {
     if ( mAddToProject )

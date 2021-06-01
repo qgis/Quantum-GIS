@@ -21,6 +21,7 @@
 #include <QDir>
 #include <QDesktopServices>
 #include <QSvgGenerator>
+#include <QBuffer>
 
 //qgis includes...
 #include <qgsmaplayer.h>
@@ -33,6 +34,9 @@
 #include <qgsfillsymbollayer.h>
 #include "qgslinesymbollayer.h"
 #include "qgsproperty.h"
+#include "qgslinesymbol.h"
+#include "qgsmarkersymbol.h"
+#include "qgsfillsymbol.h"
 
 //qgis test includes
 #include "qgsrenderchecker.h"

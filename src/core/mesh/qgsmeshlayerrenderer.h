@@ -31,7 +31,6 @@ class QgsMeshLayer;
 #include "qgsrasterinterface.h"
 #include "qgstriangularmesh.h"
 #include "qgsmeshlayer.h"
-#include "qgssymbol.h"
 #include "qgsmeshdataprovider.h"
 #include "qgsmeshtracerenderer.h"
 #include "qgsmapclippingregion.h"
@@ -84,7 +83,7 @@ struct CORE_NO_EXPORT QgsMeshLayerRendererCache
 
 /**
  * \ingroup core
- * Implementation of threaded rendering for mesh layers.
+ * \brief Implementation of threaded rendering for mesh layers.
  *
  * \note not available in Python bindings
  * \since QGIS 3.2

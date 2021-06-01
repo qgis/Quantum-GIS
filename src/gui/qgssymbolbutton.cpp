@@ -29,10 +29,14 @@
 #include "qgsexpressioncontextutils.h"
 #include "qgsgui.h"
 #include "qgscolordialog.h"
+#include "qgsfillsymbol.h"
+#include "qgslinesymbol.h"
+#include "qgsmarkersymbol.h"
 
 #include <QMenu>
 #include <QClipboard>
 #include <QDrag>
+#include <QBuffer>
 
 QgsSymbolButton::QgsSymbolButton( QWidget *parent, const QString &dialogTitle )
   : QToolButton( parent )
@@ -55,6 +59,8 @@ QgsSymbolButton::QgsSymbolButton( QWidget *parent, const QString &dialogTitle )
   mSizeHint = QSize( size.width(), std::max( size.height(), fontHeight ) );
 }
 
+QgsSymbolButton::~QgsSymbolButton() = default;
+
 QSize QgsSymbolButton::minimumSizeHint() const
 {
 
@@ -66,25 +72,25 @@ QSize QgsSymbolButton::sizeHint() const
   return mSizeHint;
 }
 
-void QgsSymbolButton::setSymbolType( QgsSymbol::SymbolType type )
+void QgsSymbolButton::setSymbolType( Qgis::SymbolType type )
 {
   if ( type != mType )
   {
     switch ( type )
     {
-      case QgsSymbol::Marker:
+      case Qgis::SymbolType::Marker:
         mSymbol.reset( QgsMarkerSymbol::createSimple( QVariantMap() ) );
         break;
 
-      case QgsSymbol::Line:
+      case Qgis::SymbolType::Line:
         mSymbol.reset( QgsLineSymbol::createSimple( QVariantMap() ) );
         break;
 
-      case QgsSymbol::Fill:
+      case Qgis::SymbolType::Fill:
         mSymbol.reset( QgsFillSymbol::createSimple( QVariantMap() ) );
         break;
 
-      case QgsSymbol::Hybrid:
+      case Qgis::SymbolType::Hybrid:
         break;
     }
   }
@@ -551,11 +557,7 @@ void QgsSymbolButton::updatePreview( const QColor &color, QgsSymbol *tempSymbol 
   // set tooltip
   // create very large preview image
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
-  int width = static_cast< int >( Qgis::UI_SCALE_FACTOR * fontMetrics().width( 'X' ) * 23 );
-#else
   int width = static_cast< int >( Qgis::UI_SCALE_FACTOR * fontMetrics().horizontalAdvance( 'X' ) * 23 );
-#endif
   int height = static_cast< int >( width / 1.61803398875 ); // golden ratio
 
   QPixmap pm = QgsSymbolLayerUtils::symbolPreviewPixmap( previewSymbol.get(), QSize( width, height ), height / 20 );

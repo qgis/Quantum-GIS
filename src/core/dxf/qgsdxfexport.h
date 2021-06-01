@@ -22,7 +22,6 @@
 #include "qgis_sip.h"
 #include "qgis.h"
 #include "qgsgeometry.h"
-#include "qgssymbol.h" // for OutputUnit enum
 #include "qgsmapsettings.h"
 #include "qgslabelsink.h"
 
@@ -40,6 +39,7 @@ class QgsCurvePolygon;
 class QgsCircularString;
 class QgsCompoundCurve;
 struct DxfLayerJob;
+class QgsSymbolRenderContext;
 
 #define DXF_HANDSEED 100
 #define DXF_HANDMAX 9999999
@@ -54,6 +54,7 @@ namespace pal // SIP_SKIP
 /**
  * \ingroup core
  * \class QgsDxfExport
+ * \brief Exports QGIS layers to the DXF format.
  */
 #ifdef SIP_RUN
 class CORE_EXPORT QgsDxfExport
@@ -330,6 +331,14 @@ class CORE_EXPORT QgsDxfExport : public QgsLabelSink
      * \note available in Python bindings as writeGroupInt
      */
     void writeGroup( int code, int i ) SIP_PYNAME( writeGroupInt );
+
+    /**
+     * Write a tuple of group code and long value
+     * \param code group code
+     * \param i integer value
+     * \note available in Python bindings as writeGroupLong
+     */
+    void writeGroup( int code, long long i ) SIP_PYNAME( writeGroupLong );
 
     /**
      * Write a group code with a floating point value

@@ -29,7 +29,8 @@
 #include "qgssymbolselectordialog.h"
 #include "qgsvectorlayer.h"
 #include "qgsexpressioncontextutils.h"
-
+#include "qgsmarkersymbol.h"
+#include "qgslinesymbol.h"
 
 QgsDataDefinedSizeLegendWidget::QgsDataDefinedSizeLegendWidget( const QgsDataDefinedSizeLegend *ddsLegend, const QgsProperty &ddSize, QgsMarkerSymbol *overrideSymbol, QgsMapCanvas *canvas, QWidget *parent )
   : QgsPanelWidget( parent )
@@ -39,7 +40,7 @@ QgsDataDefinedSizeLegendWidget::QgsDataDefinedSizeLegendWidget( const QgsDataDef
   setupUi( this );
   setPanelTitle( tr( "Data-defined Size Legend" ) );
 
-  mLineSymbolButton->setSymbolType( QgsSymbol::Line );
+  mLineSymbolButton->setSymbolType( Qgis::SymbolType::Line );
 
   QgsMarkerSymbol *symbol = nullptr;
 
@@ -196,7 +197,7 @@ void QgsDataDefinedSizeLegendWidget::changeSymbol()
 
   QString crsAuthId = mMapCanvas ? mMapCanvas->mapSettings().destinationCrs().authid() : QString();
   QgsVectorLayer::LayerOptions options { QgsProject::instance()->transformContext() };
-  std::unique_ptr<QgsVectorLayer> layer = qgis::make_unique<QgsVectorLayer>( QStringLiteral( "Point?crs=%1" ).arg( crsAuthId ),
+  std::unique_ptr<QgsVectorLayer> layer = std::make_unique<QgsVectorLayer>( QStringLiteral( "Point?crs=%1" ).arg( crsAuthId ),
                                           QStringLiteral( "tmp" ),
                                           QStringLiteral( "memory" ),
                                           options ) ;

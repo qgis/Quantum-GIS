@@ -21,6 +21,8 @@
 #include "qgsmessagelog.h"
 #include "qgsproviderregistry.h"
 #include "qgsapplication.h"
+#include "qgsvectorlayer.h"
+#include <QRegularExpression>
 
 QgsSpatiaLiteProviderConnection::QgsSpatiaLiteProviderConnection( const QString &name )
   : QgsAbstractDatabaseProviderConnection( name )
@@ -83,24 +85,24 @@ void QgsSpatiaLiteProviderConnection::createVectorTable( const QString &schema,
   checkCapability( Capability::CreateVectorTable );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   QMap<QString, QVariant> opts { *options };
   opts[ QStringLiteral( "layerName" ) ] = QVariant( name );
   opts[ QStringLiteral( "update" ) ] = true;
   QMap<int, int> map;
   QString errCause;
-  QgsVectorLayerExporter::ExportError errCode = QgsSpatiaLiteProvider::createEmptyLayer(
-        uri() + QStringLiteral( " table=%1 (geom)" ).arg( QgsSqliteUtils::quotedIdentifier( name ) ),
-        fields,
-        wkbType,
-        srs,
-        overwrite,
-        &map,
-        &errCause,
-        &opts
-      );
-  if ( errCode != QgsVectorLayerExporter::ExportError::NoError )
+  Qgis::VectorExportResult res = QgsSpatiaLiteProvider::createEmptyLayer(
+                                   uri() + QStringLiteral( " table=%1 (geom)" ).arg( QgsSqliteUtils::quotedIdentifier( name ) ),
+                                   fields,
+                                   wkbType,
+                                   srs,
+                                   overwrite,
+                                   &map,
+                                   &errCause,
+                                   &opts
+                                 );
+  if ( res != Qgis::VectorExportResult::Success )
   {
     throw QgsProviderConnectionException( QObject::tr( "An error occurred while creating the vector layer: %1" ).arg( errCause ) );
   }
@@ -111,7 +113,7 @@ void QgsSpatiaLiteProviderConnection::dropVectorTable( const QString &schema, co
   checkCapability( Capability::DropVectorTable );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   QString errCause;
 
@@ -157,7 +159,7 @@ void QgsSpatiaLiteProviderConnection::renameVectorTable( const QString &schema, 
   checkCapability( Capability::RenameVectorTable );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   // TODO: maybe an index?
   QString sql( QStringLiteral( "ALTER TABLE %1 RENAME TO %2" )
@@ -193,7 +195,7 @@ void QgsSpatiaLiteProviderConnection::vacuum( const QString &schema, const QStri
   checkCapability( Capability::Vacuum );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   executeSqlDirect( QStringLiteral( "VACUUM" ) );
 }
@@ -205,7 +207,7 @@ void QgsSpatiaLiteProviderConnection::createSpatialIndex( const QString &schema,
 
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
 
   QString geometryColumnName { options.geometryColumnName };
@@ -237,7 +239,7 @@ bool QgsSpatiaLiteProviderConnection::spatialIndexExists( const QString &schema,
   checkCapability( Capability::CreateSpatialIndex );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   const QList<QVariantList> res = executeSqlPrivate( QStringLiteral( "SELECT spatial_index_enabled FROM geometry_columns WHERE lower(f_table_name) = lower(%1) AND lower(f_geometry_column) = lower(%2)" )
                                   .arg( QgsSqliteUtils::quotedString( name ),
@@ -250,7 +252,7 @@ QList<QgsSpatiaLiteProviderConnection::TableProperty> QgsSpatiaLiteProviderConne
   checkCapability( Capability::Tables );
   if ( ! schema.isEmpty() )
   {
-    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::Info );
+    QgsMessageLog::logMessage( QStringLiteral( "Schema is not supported by Spatialite, ignoring" ), QStringLiteral( "OGR" ), Qgis::MessageLevel::Info );
   }
   QList<QgsSpatiaLiteProviderConnection::TableProperty> tableInfo;
   QString errCause;
@@ -316,7 +318,7 @@ QList<QgsSpatiaLiteProviderConnection::TableProperty> QgsSpatiaLiteProviderConne
         QgsSpatiaLiteProviderConnection::TableProperty property;
         property.setTableName( tableName );
         // Create a layer and get information from it
-        std::unique_ptr< QgsVectorLayer > vl = qgis::make_unique<QgsVectorLayer>( dsUri.uri(), QString(), QLatin1String( "spatialite" ) );
+        std::unique_ptr< QgsVectorLayer > vl = std::make_unique<QgsVectorLayer>( dsUri.uri(), QString(), QLatin1String( "spatialite" ) );
         if ( vl->isValid() )
         {
           if ( vl->isSpatial() )
@@ -429,7 +431,7 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsSpatiaLiteProviderConnecti
         QgsFields fields { QgsOgrUtils::readOgrFields( fet.get(), QTextCodec::codecForName( "UTF-8" ) ) };
         iterator->setFields( fields );
 
-        for ( const auto &f : qgis::as_const( fields ) )
+        for ( const auto &f : std::as_const( fields ) )
         {
           results.appendColumn( f.name() );
         }
@@ -552,7 +554,7 @@ void QgsSpatiaLiteProviderConnection::deleteField( const QString &fieldName, con
 {
   QgsVectorLayer::LayerOptions options { false, false };
   options.skipCrsValidation = true;
-  std::unique_ptr<QgsVectorLayer> vl { qgis::make_unique<QgsVectorLayer>( QStringLiteral( "%1|layername=%2" ).arg( pathFromUri(), tableName ), QStringLiteral( "temp_layer" ), QStringLiteral( "ogr" ), options ) };
+  std::unique_ptr<QgsVectorLayer> vl { std::make_unique<QgsVectorLayer>( QStringLiteral( "%1|layername=%2" ).arg( pathFromUri(), tableName ), QStringLiteral( "temp_layer" ), QStringLiteral( "ogr" ), options ) };
   if ( ! vl->isValid() )
   {
     throw QgsProviderConnectionException( QObject::tr( "Could not create a valid layer for table '%1'" ).arg( tableName ) );

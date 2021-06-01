@@ -31,7 +31,8 @@
 
 /**
  * \ingroup core
- * This class wraps a request for features to a vector layer (or directly its vector data provider).
+ * \brief This class wraps a request for features to a vector layer (or directly its vector data provider).
+ *
  * The request may apply a filter to fetch only a particular subset of features. Currently supported filters:
  *
  * - no filter - all features are returned
@@ -82,6 +83,7 @@ class CORE_EXPORT QgsFeatureRequest
       SubsetOfAttributes = 2,  //!< Fetch only a subset of attributes (setSubsetOfAttributes sets this flag)
       ExactIntersect     = 4,   //!< Use exact geometry intersection (slower) instead of bounding boxes
       IgnoreStaticNodesDuringExpressionCompilation = 8, //!< If a feature request uses a filter expression which can be partially precalculated due to static nodes in the expression, setting this flag will prevent these precalculated values from being utilized during compilation of the filter for the backend provider. This flag significantly slows down feature requests and should be used for debugging purposes only. (Since QGIS 3.18)
+      EmbeddedSymbols    = 16,  //!< Retrieve any embedded feature symbology (since QGIS 3.20)
     };
     Q_DECLARE_FLAGS( Flags, Flag )
 
@@ -106,7 +108,7 @@ class CORE_EXPORT QgsFeatureRequest
 
     /**
      * \ingroup core
-     * The OrderByClause class represents an order by clause for a QgsFeatureRequest.
+     * \brief The OrderByClause class represents an order by clause for a QgsFeatureRequest.
      *
      * It can be a simple field or an expression. Multiple order by clauses can be added to
      * a QgsFeatureRequest to fine tune the behavior if a single field or expression is not
@@ -222,7 +224,7 @@ class CORE_EXPORT QgsFeatureRequest
 
     /**
      * \ingroup core
-     * Represents a list of OrderByClauses, with the most important first and the least
+     * \brief Represents a list of OrderByClauses, with the most important first and the least
      * important last.
      *
      * \since QGIS 2.14
@@ -737,7 +739,7 @@ class QgsAbstractFeatureIterator;
 
 /**
  * \ingroup core
- * Base class that can be used for any class that is capable of returning features
+ * \brief Base class that can be used for any class that is capable of returning features
  * \since QGIS 2.4
  */
 class CORE_EXPORT QgsAbstractFeatureSource

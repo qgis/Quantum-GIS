@@ -16,7 +16,6 @@
 
 #include "qgsmimedatautils.h"
 
-#include "qgsdataitem.h"
 #include "qgslayertree.h"
 #include "qgslogger.h"
 #include "qgspluginlayer.h"
@@ -25,6 +24,8 @@
 #include "qgsvectordataprovider.h"
 #include "qgsvectorlayer.h"
 #include "qgsmeshlayer.h"
+
+#include <QRegularExpression>
 
 static const char *QGIS_URILIST_MIMETYPE = "application/x-vnd.qgis.qgis.uri";
 

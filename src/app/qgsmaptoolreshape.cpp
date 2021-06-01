@@ -58,7 +58,7 @@ void QgsMapToolReshape::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
     else if ( error == 2 )
     {
       //problem with coordinate transformation
-      emit messageEmitted( tr( "Cannot transform the point to the layers coordinate system" ), Qgis::Warning );
+      emit messageEmitted( tr( "Cannot transform the point to the layers coordinate system" ), Qgis::MessageLevel::Warning );
       return;
     }
 
@@ -79,6 +79,18 @@ void QgsMapToolReshape::cadCanvasReleaseEvent( QgsMapMouseEvent *e )
 
     stopCapturing();
   }
+}
+
+bool QgsMapToolReshape::supportsTechnique( QgsMapToolCapture::CaptureTechnique technique ) const
+{
+  switch ( technique )
+  {
+    case QgsMapToolCapture::StraightSegments:
+    case QgsMapToolCapture::CircularString:
+    case QgsMapToolCapture::Streaming:
+      return true;
+  }
+  return false;
 }
 
 bool QgsMapToolReshape::isBindingLine( QgsVectorLayer *vlayer, const QgsRectangle &bbox ) const
@@ -121,9 +133,18 @@ void QgsMapToolReshape::reshape( QgsVectorLayer *vlayer )
     bbox.combineExtentWith( pointsZM().at( i ).x(), pointsZM().at( i ).y() );
   }
 
-
+  const bool hasCurvedSegments = captureCurve()->hasCurvedSegments();
   QgsPointSequence pts;
-  captureCurve()->points( pts );
+  if ( !hasCurvedSegments )
+  {
+    captureCurve()->points( pts );
+  }
+  else
+  {
+    std::unique_ptr< QgsLineString > segmented( captureCurve()->curveToLine() );
+    segmented->points( pts );
+  }
+
   QgsLineString reshapeLineString( pts );
 
   //query all the features that intersect bounding box of capture line
@@ -181,7 +202,7 @@ void QgsMapToolReshape::reshape( QgsVectorLayer *vlayer )
             res = geom.avoidIntersections( QgsProject::instance()->avoidIntersectionsLayers(), ignoreFeatures );
             if ( res == 1 )
             {
-              emit messageEmitted( tr( "An error was reported during intersection removal" ), Qgis::Critical );
+              emit messageEmitted( tr( "An error was reported during intersection removal" ), Qgis::MessageLevel::Critical );
               vlayer->destroyEditCommand();
               stopCapturing();
               return;
@@ -190,13 +211,13 @@ void QgsMapToolReshape::reshape( QgsVectorLayer *vlayer )
 
           if ( geom.isEmpty() ) //intersection removal might have removed the whole geometry
           {
-            emit messageEmitted( tr( "The feature cannot be reshaped because the resulting geometry is empty" ), Qgis::Critical );
+            emit messageEmitted( tr( "The feature cannot be reshaped because the resulting geometry is empty" ), Qgis::MessageLevel::Critical );
             vlayer->destroyEditCommand();
             return;
           }
           if ( res == 3 )
           {
-            emit messageEmitted( tr( "At least one geometry intersected is invalid. These geometries must be manually repaired." ), Qgis::Warning );
+            emit messageEmitted( tr( "At least one geometry intersected is invalid. These geometries must be manually repaired." ), Qgis::MessageLevel::Warning );
           }
         }
 

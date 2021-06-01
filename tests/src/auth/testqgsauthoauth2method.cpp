@@ -16,7 +16,7 @@
 
 #include "qgstest.h"
 
-#include <QtTest/QtTest>
+#include <QtTest/QTest>
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
@@ -24,12 +24,14 @@
 #include <QString>
 #include <QStringList>
 #include <QTemporaryFile>
+#include <QSignalSpy>
 
 #include "qgsapplication.h"
 #include "qgsauthmanager.h"
 #include "qgsauthoauth2config.h"
+#ifdef WITH_GUI
 #include "qgsauthoauth2edit.h"
-
+#endif
 
 /**
  * \ingroup UnitTests
@@ -415,6 +417,7 @@ void TestQgsAuthOAuth2Method::testOAuth2ConfigUtils()
 
 void TestQgsAuthOAuth2Method::testDynamicRegistrationNoEndpoint()
 {
+#ifdef WITH_GUI
   QgsAuthOAuth2Config *config = baseConfig();
   config->setClientId( QString( ) );
   config->setClientSecret( QString( ) );
@@ -435,10 +438,12 @@ void TestQgsAuthOAuth2Method::testDynamicRegistrationNoEndpoint()
   dlg.leSoftwareStatementJwtPath->setText( QStringLiteral( "%1/auth_code_grant_display_code.jwt" ).arg( sTestDataDir ) );
   QVERIFY( ! dlg.btnRegister->isEnabled() );
   QCOMPARE( dlg.leSoftwareStatementConfigUrl->text(), QString() );
+#endif
 }
 
 void TestQgsAuthOAuth2Method::testDynamicRegistration()
 {
+#ifdef WITH_GUI
   QgsAuthOAuth2Config *config = baseConfig();
   config->setClientId( QString( ) );
   config->setClientSecret( QString( ) );
@@ -471,11 +476,13 @@ void TestQgsAuthOAuth2Method::testDynamicRegistration()
   }
   QCOMPARE( dlg.leClientId->text(), QLatin1String( "___QGIS_ROCKS___@www.qgis.org" ) );
   QCOMPARE( dlg.leClientSecret->text(), QLatin1String( "___QGIS_ROCKS______QGIS_ROCKS______QGIS_ROCKS___" ) );
+#endif
 }
 
 
 void TestQgsAuthOAuth2Method::testDynamicRegistrationJwt()
 {
+#ifdef WITH_GUI
   QgsAuthOAuth2Config *config = baseConfig();
   config->setClientId( QString( ) );
   config->setClientSecret( QString( ) );
@@ -505,6 +512,7 @@ void TestQgsAuthOAuth2Method::testDynamicRegistrationJwt()
   }
   QCOMPARE( dlg.leClientId->text(), QLatin1String( "___QGIS_ROCKS___@www.qgis.org" ) );
   QCOMPARE( dlg.leClientSecret->text(), QLatin1String( "___QGIS_ROCKS______QGIS_ROCKS______QGIS_ROCKS___" ) );
+#endif
 }
 
 

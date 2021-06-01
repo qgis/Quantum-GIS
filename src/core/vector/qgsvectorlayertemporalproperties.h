@@ -32,7 +32,7 @@ class QgsFields;
 /**
  * \class QgsVectorLayerTemporalContext
  * \ingroup core
- * Encapsulates the context in which a QgsVectorLayer's temporal capabilities
+ * \brief Encapsulates the context in which a QgsVectorLayer's temporal capabilities
  * will be applied
  *
  * \since QGIS 3.14
@@ -63,7 +63,7 @@ class CORE_EXPORT QgsVectorLayerTemporalContext
 /**
  * \class QgsVectorLayerTemporalProperties
  * \ingroup core
- * Implementation of map layer temporal properties for vector layers.
+ * \brief Implementation of map layer temporal properties for vector layers.
  *
  * \since QGIS 3.14
  */
@@ -85,7 +85,7 @@ class CORE_EXPORT QgsVectorLayerTemporalProperties : public QgsMapLayerTemporalP
 
     /**
      * Mode of the vector temporal properties
-     **/
+     */
     enum TemporalMode
     {
       ModeFixedTemporalRange = 0, //!< Mode when temporal properties have fixed start and end datetimes.
@@ -100,14 +100,14 @@ class CORE_EXPORT QgsVectorLayerTemporalProperties : public QgsMapLayerTemporalP
      * Returns the temporal properties mode.
      *
      *\see setMode()
-    **/
+    */
     TemporalMode mode() const;
 
     /**
      * Sets the temporal properties \a mode.
      *
      *\see mode()
-    **/
+    */
     void setMode( TemporalMode mode );
 
     /**
@@ -134,7 +134,7 @@ class CORE_EXPORT QgsVectorLayerTemporalProperties : public QgsMapLayerTemporalP
      * QgsVectorLayerTemporalProperties::ModeFixedTemporalRange
      *
      * \see setFixedTemporalRange()
-    **/
+    */
     const QgsDateTimeRange &fixedTemporalRange() const;
 
     /**

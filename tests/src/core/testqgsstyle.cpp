@@ -17,6 +17,7 @@
 #include <QStringList>
 #include <QApplication>
 #include <QFileInfo>
+#include <QSignalSpy>
 
 // clazy:excludeall=qcolor-from-literal
 
@@ -52,6 +53,8 @@
 #include "qgsmaplayerlegend.h"
 #include "qgsabstract3dsymbol.h"
 #include "qgs3dsymbolregistry.h"
+#include "qgsmarkersymbol.h"
+#include "qgsfillsymbol.h"
 
 /**
  * \ingroup UnitTests
@@ -116,6 +119,7 @@ class TestStyle : public QObject
     void testVisitor();
     void testColorRampShaderClassificationEqualInterval();
     void testColorRampShaderClassificationContinius();
+    void testDefaultLabelTextFormat();
 };
 
 
@@ -157,6 +161,9 @@ void TestStyle::initTestCase()
   mStyle = new QgsStyle();
   mStyle->createMemoryDatabase();
 
+  // now cheat!
+  QgsStyle::sDefaultStyle = mStyle;
+
   // cpt-city ramp, small selection available in <testdir>/cpt-city
   QgsCptCityArchive::initArchives();
 
@@ -170,7 +177,9 @@ void TestStyle::cleanupTestCase()
 {
   // don't save
   // mStyle->save();
-  delete mStyle;
+
+  // don't delete -- it's handled by exitQgis, cos we've set mStyle as the static default style instance
+  // delete mStyle;
 
   QgsCptCityArchive::clearArchives();
   QgsApplication::exitQgis();
@@ -271,7 +280,7 @@ void TestStyle::testCreateColorRamps()
             << QStringLiteral( "test_gradient" )
             << QStringLiteral( "test_random" ) );
 
-  std::unique_ptr< QgsCptCityColorRamp > cc4Ramp = qgis::make_unique< QgsCptCityColorRamp >( QStringLiteral( "grass/byr" ), QString() );
+  std::unique_ptr< QgsCptCityColorRamp > cc4Ramp = std::make_unique< QgsCptCityColorRamp >( QStringLiteral( "grass/byr" ), QString() );
   QgsStyleColorRampEntity entity( cc4Ramp.get() );
   QVERIFY( mStyle->addEntity( "test_cc4", &entity, true ) );
 
@@ -552,7 +561,7 @@ void TestStyle::testLoadColorRamps()
 
   QgsDebugMsg( "loaded colorRamps: " + colorRamps.join( " " ) );
 
-  Q_FOREACH ( const QString &name, colorRampsTest )
+  for ( const QString &name : colorRampsTest )
   {
     QgsDebugMsg( "colorRamp " + name );
     QVERIFY( colorRamps.contains( name ) );
@@ -580,7 +589,7 @@ void TestStyle::testSaveLoad()
 
   QStringList colorRampsTest = QStringList() << QStringLiteral( "test_gradient" );
 
-  Q_FOREACH ( const QString &name, colorRampsTest )
+  for ( const QString &name : colorRampsTest )
   {
     QgsDebugMsg( "colorRamp " + name );
     QVERIFY( colorRamps.contains( name ) );
@@ -1607,10 +1616,10 @@ void TestStyle::testVisitor()
 
   QgsLayoutItemLegend *legend = new QgsLayoutItemLegend( l );
   l->addLayoutItem( legend );
-  QgsLegendPatchShape shape( QgsSymbol::Marker, QgsGeometry::fromWkt( QStringLiteral( "Point( 3 4)" ) ) );
+  QgsLegendPatchShape shape( Qgis::SymbolType::Marker, QgsGeometry::fromWkt( QStringLiteral( "Point( 3 4)" ) ) );
   qobject_cast< QgsLayerTreeLayer * >( legend->model()->index2node( legend->model()->index( 0, 0 ) ) )->setPatchShape( shape );
   const QList<QgsLayerTreeModelLegendNode *> layerLegendNodes = legend->model()->layerLegendNodes( qobject_cast< QgsLayerTreeLayer * >( legend->model()->index2node( legend->model()->index( 1, 0 ) ) ), false );
-  QgsLegendPatchShape shape2( QgsSymbol::Marker, QgsGeometry::fromWkt( QStringLiteral( "Point( 13 14)" ) ) );
+  QgsLegendPatchShape shape2( Qgis::SymbolType::Marker, QgsGeometry::fromWkt( QStringLiteral( "Point( 13 14)" ) ) );
   QCOMPARE( qobject_cast< QgsLayerTreeLayer * >( legend->model()->index2node( legend->model()->index( 1, 0 ) ) )->layer()->name(), QStringLiteral( "vl2" ) );
   QgsMapLayerLegendUtils::setLegendNodePatchShape( qobject_cast< QgsLayerTreeLayer * >( legend->model()->index2node( legend->model()->index( 1, 0 ) ) ), 1, shape2 );
   legend->model()->refreshLayerLegend( qobject_cast< QgsLayerTreeLayer * >( legend->model()->index2node( legend->model()->index( 1, 0 ) ) ) );
@@ -1808,6 +1817,28 @@ void TestStyle::testColorRampShaderClassificationContinius()
 
     QVERIFY( compareItemLists( itemsList, itemsList2 ) );
   }
+}
+
+void TestStyle::testDefaultLabelTextFormat()
+{
+  // no "Default" text format yet
+  QVERIFY( !QgsStyle::defaultStyle()->textFormat( QStringLiteral( "Default" ) ).isValid() );
+
+  QgsPalLayerSettings settings;
+  // should be app-wide default font (gross!)
+  QCOMPARE( settings.format().font().family(), QFont().family() );
+
+  // now add a default text format
+  QgsTextFormat format;
+  format.setFont( QgsFontUtils::getStandardTestFont() );
+  format.buffer().setEnabled( true );
+  QVERIFY( QgsStyle::defaultStyle()->addTextFormat( QStringLiteral( "Default" ), format ) );
+
+  // re-create default label settings
+  QgsPalLayerSettings settings2;
+  // should be default text format now, not app default font
+  QCOMPARE( settings2.format().font().family(),  QgsFontUtils::getStandardTestFont().family() );
+  QVERIFY( settings2.format().buffer().enabled() );
 }
 
 QGSTEST_MAIN( TestStyle )

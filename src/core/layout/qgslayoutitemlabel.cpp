@@ -41,6 +41,7 @@
 #include <QPainter>
 #include <QTimer>
 #include <QEventLoop>
+#include <QThread>
 
 QgsLayoutItemLabel::QgsLayoutItemLabel( QgsLayout *layout )
   : QgsLayoutItem( layout )
@@ -513,6 +514,15 @@ void QgsLayoutItemLabel::refresh()
   invalidateCache();
   QgsLayoutItem::refresh();
   refreshExpressionContext();
+}
+
+void QgsLayoutItemLabel::convertToStaticText()
+{
+  const QString evaluated = currentText();
+  if ( evaluated == mText )
+    return; // no changes
+
+  setText( evaluated );
 }
 
 void QgsLayoutItemLabel::itemShiftAdjustSize( double newWidth, double newHeight, double &xShift, double &yShift ) const

@@ -24,7 +24,8 @@
 #include "qgsexception.h"
 #include "qgsapplication.h"
 #include "qgsmessagelog.h"
-
+#include "qgsfeedback.h"
+#include <QIcon>
 
 const QStringList QgsMssqlProviderConnection::EXTRA_CONNECTION_PARAMETERS
 {
@@ -159,17 +160,17 @@ void QgsMssqlProviderConnection::createVectorTable( const QString &schema,
   }
   QMap<int, int> map;
   QString errCause;
-  QgsVectorLayerExporter::ExportError errCode = QgsMssqlProvider::createEmptyLayer(
-        newUri.uri(),
-        fields,
-        wkbType,
-        srs,
-        overwrite,
-        &map,
-        &errCause,
-        options
-      );
-  if ( errCode != QgsVectorLayerExporter::ExportError::NoError )
+  Qgis::VectorExportResult res = QgsMssqlProvider::createEmptyLayer(
+                                   newUri.uri(),
+                                   fields,
+                                   wkbType,
+                                   srs,
+                                   overwrite,
+                                   &map,
+                                   &errCause,
+                                   options
+                                 );
+  if ( res != Qgis::VectorExportResult::Success )
   {
     throw QgsProviderConnectionException( QObject::tr( "An error occurred while creating the vector layer: %1" ).arg( errCause ) );
   }
@@ -225,7 +226,6 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsMssqlProviderConnection::e
 
 QgsAbstractDatabaseProviderConnection::QueryResult QgsMssqlProviderConnection::executeSqlPrivate( const QString &sql, bool resolveTypes, QgsFeedback *feedback ) const
 {
-
   if ( feedback && feedback->isCanceled() )
   {
     return QgsAbstractDatabaseProviderConnection::QueryResult();
@@ -399,8 +399,8 @@ QList<QgsMssqlProviderConnection::TableProperty> QgsMssqlProviderConnection::tab
     table.setSchema( row[0].toString() );
     table.setTableName( row[1].toString() );
     table.setGeometryColumn( row[2].toString() );
-    //const QVariant srid { row[3] };
-    //const QVariant type { row[4] }; // GEOMETRY|GEOGRAPHY
+    //const QVariant srid = row[3];
+    //const QVariant type = row[4]; // GEOMETRY|GEOGRAPHY
     if ( row[5].toBool() )
       table.setFlag( QgsMssqlProviderConnection::TableFlag::View );
 

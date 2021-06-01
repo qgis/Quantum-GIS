@@ -49,7 +49,7 @@ Qt3DCore::QEntity *QgsMeshTerrainTileLoader::createEntity( Qt3DCore::QEntity *pa
 //
 
 QgsMeshTerrainGenerator::QgsMeshTerrainGenerator()
-  : mSymbol( qgis::make_unique< QgsMesh3DSymbol >() )
+  : mSymbol( std::make_unique< QgsMesh3DSymbol >() )
 {
 
 }
@@ -95,6 +95,9 @@ void QgsMeshTerrainGenerator::setLayer( QgsMeshLayer *layer )
   mLayer = QgsMapLayerRef( layer );
   mIsValid = layer != nullptr;
 
+  if ( layer )
+    mTerrainTilingScheme = QgsTilingScheme( layer->extent(), layer->crs() );
+
   updateTriangularMesh();
 }
 
@@ -108,7 +111,7 @@ QgsTerrainGenerator *QgsMeshTerrainGenerator::clone() const
 {
   QgsMeshTerrainGenerator *cloned = new QgsMeshTerrainGenerator();
   cloned->mLayer = mLayer;
-  cloned->mTerrainTilingScheme = QgsTilingScheme();
+  cloned->mTerrainTilingScheme = mTerrainTilingScheme;
   cloned->mCrs = mCrs;
   cloned->mSymbol.reset( mSymbol->clone() );
   cloned->mTransformContext = mTransformContext;

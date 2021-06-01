@@ -20,7 +20,6 @@
 #include "ui_qgsbrowserdirectorypropertiesbase.h"
 #include "ui_qgsbrowserpropertiesdialogbase.h"
 
-#include "qgsdataitem.h"
 #include "qgsbrowsertreeview.h"
 #include "qgsdockwidget.h"
 #include "qgis_gui.h"
@@ -37,7 +36,7 @@ class QgsDataItemGuiContext;
 
 /**
  * \ingroup gui
- * The QgsBrowserDockWidget class
+ * \brief The QgsBrowserDockWidget class
  * \since QGIS 3.0
  */
 class GUI_EXPORT QgsBrowserDockWidget : public QgsDockWidget, private Ui::QgsBrowserDockWidgetBase

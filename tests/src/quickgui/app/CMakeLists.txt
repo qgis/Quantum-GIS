@@ -7,7 +7,6 @@ set(QGIS_QUICK_APP_SRCS
 
 set(QGIS_QUICK_APP_QMLS
   main.qml
-  FeaturePanel.qml
 )
 
 include_directories(
@@ -43,6 +42,8 @@ add_executable(${QGIS_QUICK_APP_NAME}
     ${QGIS_QUICK_APP_SRCS}
     ${QGIS_QUICK_APP_MOC_SRCS}
 )
+
+target_compile_features(${QGIS_QUICK_APP_NAME} PRIVATE cxx_std_17)
 
 target_link_libraries(${QGIS_QUICK_APP_NAME} Qt5::Gui Qt5::Qml Qt5::Quick Qt5::Xml qgis_core qgis_quick)
 set_target_properties(${QGIS_QUICK_APP_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

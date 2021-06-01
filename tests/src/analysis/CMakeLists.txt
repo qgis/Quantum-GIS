@@ -33,6 +33,8 @@ macro (ADD_QGIS_TEST TESTSRC)
   set(${TESTNAME}_SRCS ${TESTSRC} ${util_SRCS})
   set(${TESTNAME}_MOC_CPPS ${TESTSRC})
   add_executable(${TESTNAME} ${${TESTNAME}_SRCS})
+  # require c++17
+  target_compile_features(${TESTNAME} PRIVATE cxx_std_17)
   target_link_libraries(${TESTNAME}
     ${Qt5Core_LIBRARIES}
     ${Qt5Test_LIBRARIES}
@@ -61,6 +63,16 @@ set(TESTS
  testqgstriangulation.cpp
 )
 
+if(HAVE_GSL)
+  set(TESTS
+    ${TESTS}
+    testqgsgcptransformer.cpp
+    )
+endif()
+
 foreach(TESTSRC ${TESTS})
     ADD_QGIS_TEST(${TESTSRC})
 endforeach(TESTSRC)
+
+SET_TESTS_PROPERTIES(qgis_processingtest
+  PROPERTIES LABELS "POSTGRES")

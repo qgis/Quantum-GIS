@@ -87,6 +87,7 @@
 #include "qgsexpressioncontextutils.h"
 #include "qgsidentifymenu.h"
 #include "qgsjsonutils.h"
+#include "qgsjsoneditwidget.h"
 #include "qgspointcloudlayer.h"
 
 #include <nlohmann/json.hpp>
@@ -720,21 +721,36 @@ QgsIdentifyResultsFeatureItem *QgsIdentifyResultsDialog::createFeatureItem( QgsV
     value = representValue( vlayer, setup, fields.at( i ).name(), attrs.at( i ) );
     attrItem->setSortData( 1, value );
     attrItem->setToolTip( 1, value );
-    bool foundLinks = false;
-    QString links = QgsStringUtils::insertLinks( value, &foundLinks );
-    if ( foundLinks )
+
+    if ( setup.type() == QLatin1String( "JsonEdit" ) )
     {
-      QLabel *valueLabel = new QLabel( links );
-      valueLabel->setOpenExternalLinks( true );
+      QgsJsonEditWidget *jsonEditWidget = new QgsJsonEditWidget();
+      jsonEditWidget->setJsonText( value );
+      jsonEditWidget->setView( QgsJsonEditWidget::View::Tree );
+      jsonEditWidget->setFormatJsonMode( QgsJsonEditWidget::FormatJson::Indented );
+      jsonEditWidget->setControlsVisible( false );
       attrItem->setData( 1, Qt::DisplayRole, QString() );
-      QTreeWidget *tw = attrItem->treeWidget();
-      tw->setItemWidget( attrItem, 1, valueLabel );
+      QTreeWidget *treeWidget = attrItem->treeWidget();
+      treeWidget->setItemWidget( attrItem, 1, jsonEditWidget );
     }
     else
     {
-      attrItem->setData( 1, Qt::DisplayRole, value );
-      QTreeWidget *tw = attrItem->treeWidget();
-      tw->setItemWidget( attrItem, 1, nullptr );
+      bool foundLinks = false;
+      QString links = QgsStringUtils::insertLinks( value, &foundLinks );
+      if ( foundLinks )
+      {
+        QLabel *valueLabel = new QLabel( links );
+        valueLabel->setOpenExternalLinks( true );
+        attrItem->setData( 1, Qt::DisplayRole, QString() );
+        QTreeWidget *tw = attrItem->treeWidget();
+        tw->setItemWidget( attrItem, 1, valueLabel );
+      }
+      else
+      {
+        attrItem->setData( 1, Qt::DisplayRole, value );
+        QTreeWidget *tw = attrItem->treeWidget();
+        tw->setItemWidget( attrItem, 1, nullptr );
+      }
     }
 
     if ( fields.at( i ).name() == vlayer->displayField() )
@@ -929,8 +945,8 @@ void QgsIdentifyResultsDialog::addFeature( QgsRasterLayer *layer,
       QTreeWidgetItem *formatItem = new QTreeWidgetItem( QStringList() << ' ' + tr( "Format" ) );
       layItem->addChild( formatItem );
       lstResults->setItemWidget( formatItem, 1, formatCombo );
-      connect( formatCombo, qgis::overload<int>::of( &QComboBox::currentIndexChanged ),
-               this, qgis::overload<int>::of( &QgsIdentifyResultsDialog::formatChanged ) );
+      connect( formatCombo, qOverload<int>( &QComboBox::currentIndexChanged ),
+               this, qOverload<int>( &QgsIdentifyResultsDialog::formatChanged ) );
     }
     else
     {
@@ -1020,7 +1036,7 @@ void QgsIdentifyResultsDialog::addFeature( QgsRasterLayer *layer,
         const auto links { QgsStringUtils::insertLinks( formattedValue, &foundLinks ) };
         if ( foundLinks )
         {
-          auto valueLabel { qgis::make_unique<QLabel>( links ) };
+          auto valueLabel { std::make_unique<QLabel>( links ) };
           attrItem->setText( 1, QString( ) );
           valueLabel->setOpenExternalLinks( true );
           lstResults->setItemWidget( attrItem, 1, valueLabel.release() );
@@ -1035,12 +1051,7 @@ void QgsIdentifyResultsDialog::addFeature( QgsRasterLayer *layer,
 #ifdef WITH_QTWEBKIT
     attrItem->webView()->page()->setLinkDelegationPolicy( QWebPage::DelegateExternalLinks );
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-    const int horizontalDpi = qApp->desktop()->screen()->logicalDpiX();
-#else
     const int horizontalDpi = logicalDpiX();
-#endif
-
 
     // Adjust zoom: text is ok, but HTML seems rather big at least on Linux/KDE
     if ( horizontalDpi > 96 )
@@ -1109,7 +1120,7 @@ void QgsIdentifyResultsDialog::addFeature( QgsRasterLayer *layer,
     QString links = QgsStringUtils::insertLinks( it.value(), &foundLinks );
     if ( foundLinks )
     {
-      auto valueLabel { qgis::make_unique<QLabel>( links ) };
+      auto valueLabel { std::make_unique<QLabel>( links ) };
       valueLabel->setOpenExternalLinks( true );
       tblResults->setCellWidget( j, 3, valueLabel.release() );
     }

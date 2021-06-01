@@ -44,12 +44,15 @@ set(QGIS_APP_SRCS
   qgsidentifyresultsdialog.cpp
   qgsfeatureaction.cpp
   qgslayercapabilitiesmodel.cpp
+  qgslayernotesmanager.cpp
   qgslayertreeviewindicatorprovider.cpp
   qgslayertreeviewembeddedindicator.cpp
   qgslayertreeviewfilterindicator.cpp
+  qgslayertreeviewlowaccuracyindicator.cpp
   qgslayertreeviewmemoryindicator.cpp
   qgslayertreeviewnocrsindicator.cpp
   qgslayertreeviewnonremovableindicator.cpp
+  qgslayertreeviewnotesindicator.cpp
   qgslayertreeviewbadlayerindicator.cpp
   qgslayertreeviewtemporalindicator.cpp
   qgslayertreeviewofflineindicator.cpp
@@ -148,6 +151,7 @@ set(QGIS_APP_SRCS
   qgsundowidget.cpp
   qgsmapthemes.cpp
   qgshandlebadlayers.cpp
+  qgsmaptooladdabstract.cpp
   qgsmaptooladdcircularstring.cpp
   qgsmaptoolcircularstringcurvepoint.cpp
   qgsmaptoolcircularstringradius.cpp
@@ -201,8 +205,20 @@ set(QGIS_APP_SRCS
   layout/qgsreportsectionmodel.cpp
   layout/qgsreportsectionwidget.cpp
 
-  locator/qgsinbuiltlocatorfilters.cpp
+  locator/qgsactionlocatorfilter.cpp
+  locator/qgsactivelayerfeatureslocatorfilter.cpp
+  locator/qgsalllayersfeatureslocatorfilter.cpp
+  locator/qgsbookmarklocatorfilter.cpp
+  locator/qgsexpressioncalculatorlocatorfilter.cpp
+  locator/qgsgotolocatorfilter.cpp
+  locator/qgslayertreelocatorfilter.cpp
+  locator/qgslayoutlocatorfilter.cpp
+  locator/qgsnominatimlocatorfilter.cpp
+  locator/qgssettingslocatorfilter.cpp
+
   locator/qgslocatoroptionswidget.cpp
+
+  maptools/qgsappmaptools.cpp
 
   options/qgsadvancedoptions.cpp
   options/qgscodeeditoroptions.cpp
@@ -222,8 +238,6 @@ set(QGIS_APP_SRCS
   pluginmanager/qgspluginsortfilterproxymodel.cpp
   pluginmanager/qgspluginitemdelegate.cpp
 
-  qgsnewspatialitelayerdialog.cpp
-
   qgssettingstree.cpp
   qgsvariantdelegate.cpp
   qgscrashhandler.cpp
@@ -231,7 +245,14 @@ set(QGIS_APP_SRCS
   mesh/qgsmeshcalculatordialog.cpp
 )
 
-if (WITH_GEOREFERENCER)
+if (WITH_SPATIALITE)
+  set(QGIS_APP_SRCS
+    ${QGIS_APP_SRCS}
+    qgsnewspatialitelayerdialog.cpp
+  )
+endif()
+
+if (HAVE_GEOREFERENCER)
   set(QGIS_APP_SRCS
     ${QGIS_APP_SRCS}
     georeferencer/qgsgcpcanvasitem.cpp
@@ -243,7 +264,6 @@ if (WITH_GEOREFERENCER)
     georeferencer/qgsgeoreftooldeletepoint.cpp
     georeferencer/qgsgeoreftoolmovepoint.cpp
     georeferencer/qgsgeorefvalidators.cpp
-    georeferencer/qgsleastsquares.cpp
     georeferencer/qgsmapcoordsdialog.cpp
     georeferencer/qgsresidualplotitem.cpp
     georeferencer/qgstransformsettingsdialog.cpp
@@ -419,9 +439,10 @@ if(HAVE_OPENCL)
 endif()
 
 if (HAVE_PDAL)
-  include_directories(SYSTEM
-    ${PDAL_INCLUDE_DIR}
-  )
+  include_directories(SYSTEM ${PDAL_INCLUDE_DIR})
+  if(MSVC)
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
+  endif()
 endif()
 
 if(ENABLE_MODELTEST)
@@ -443,13 +464,22 @@ endif()
 #############
 if (ANDROID)
   add_library(${QGIS_APP_NAME} SHARED ${QGIS_APPMAIN_SRCS})
+
+  # require c++17
+  target_compile_features(${QGIS_APP_NAME} PRIVATE cxx_std_17)
 else()
   add_executable(${QGIS_APP_NAME} MACOSX_BUNDLE WIN32 ${QGIS_APPMAIN_SRCS})
+
+  # require c++17
+  target_compile_features(${QGIS_APP_NAME} PRIVATE cxx_std_17)
 endif()
 
 # Putting IMAGE_RCC_SRCS into qgis_app lib is causing problems when the lib is
 # loaded (by plugin for example) in test unit (qgis_layoutpicturetest).
 add_library(qgis_app SHARED ${QGIS_APP_SRCS})
+
+# require c++17
+target_compile_features(qgis_app PRIVATE cxx_std_17)
 
 target_include_directories(qgis_app PUBLIC
   ${CMAKE_SOURCE_DIR}/external/nmea
@@ -462,6 +492,7 @@ target_include_directories(qgis_app PUBLIC
   ${CMAKE_SOURCE_DIR}/src/app/pluginmanager
   ${CMAKE_SOURCE_DIR}/src/app/gps
   ${CMAKE_SOURCE_DIR}/src/app/dwg
+  ${CMAKE_SOURCE_DIR}/src/app/maptools
   ${CMAKE_SOURCE_DIR}/src/app/mesh
   ${CMAKE_SOURCE_DIR}/src/app/locator
   ${CMAKE_SOURCE_DIR}/src/app/pointcloud
@@ -504,6 +535,7 @@ target_link_libraries(qgis_app
 target_compile_definitions(qgis_app PRIVATE "-DQT_NO_FOREACH")
 
 if (WITH_BINDINGS)
+  add_definitions(-DWITH_BINDINGS)
   target_link_libraries(qgis_app qgispython)
 endif()
 
@@ -515,7 +547,7 @@ if (WITH_3D)
   target_link_libraries(qgis_app qgis_3d)
 endif()
 
-if (WITH_GEOREFERENCER)
+if (HAVE_GEOREFERENCER)
   include_directories(SYSTEM
     ${GSL_INCLUDE_DIR}
   )
@@ -592,9 +624,7 @@ if (POSTGRES_FOUND)
 endif()
 
 if (HAVE_PDAL)
-  target_link_libraries(qgis_app
-    ${PDAL_LIBRARIES}
-  )
+  target_link_libraries(qgis_app ${PDAL_LIBRARIES})
 endif()
 
 if(MSVC)

@@ -46,7 +46,7 @@ class QgsRenderedFeatureHandlerInterface;
  * \class QgsLabelBlockingRegion
  * \ingroup core
  *
- * Label blocking region (in map coordinates and CRS).
+ * \brief Label blocking region (in map coordinates and CRS).
  *
  * \since QGIS 3.6
 */
@@ -69,7 +69,7 @@ class CORE_EXPORT QgsLabelBlockingRegion
 
 /**
  * \ingroup core
- * The QgsMapSettings class contains configuration for rendering of the map.
+ * \brief The QgsMapSettings class contains configuration for rendering of the map.
  * The rendering itself is done by QgsMapRendererJob subclasses.
  *
  * In order to set up QgsMapSettings instance, it is necessary to set at least
@@ -203,6 +203,24 @@ class CORE_EXPORT QgsMapSettings : public QgsTemporalRangeObject
      * \see outputDpi()
      */
     void setOutputDpi( double dpi );
+
+    /**
+     * Returns the target DPI (dots per inch) to be taken into consideration when rendering.
+     *
+     * The default value is -1, which states no DPI target is provided.
+     *
+     * \see setDpiTarget()
+     * \since QGIS 3.20
+     */
+    double dpiTarget() const;
+
+    /**
+     * Sets the target \a dpi (dots per inch) to be taken into consideration when rendering.
+     *
+     * \see dpiTarget()
+     * \since QGIS 3.20
+     */
+    void setDpiTarget( double dpi );
 
     /**
      * Set the magnification factor.
@@ -773,7 +791,8 @@ class CORE_EXPORT QgsMapSettings : public QgsTemporalRangeObject
 
   protected:
 
-    double mDpi;
+    double mDpi = 96.0;
+    double mDpiTarget = -1;
 
     QSize mSize;
     float mDevicePixelRatio = 1.0;

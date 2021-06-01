@@ -30,6 +30,8 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QDesktopServices>
+#include <QRegularExpression>
+#include <QUrl>
 
 #include "qgsmessagelog.h"
 
@@ -1431,11 +1433,11 @@ void QgsPluginManager::sendVote( int pluginId, int vote )
   QgsPythonRunner::eval( QStringLiteral( "pyplugin_installer.instance().sendVote('%1', '%2')" ).arg( pluginId ).arg( vote ), response );
   if ( response == QLatin1String( "True" ) )
   {
-    pushMessage( tr( "Vote sent successfully" ), Qgis::Info );
+    pushMessage( tr( "Vote sent successfully" ), Qgis::MessageLevel::Info );
   }
   else
   {
-    pushMessage( tr( "Sending vote to the plugin repository failed." ), Qgis::Warning );
+    pushMessage( tr( "Sending vote to the plugin repository failed." ), Qgis::MessageLevel::Warning );
   }
 }
 

@@ -42,6 +42,15 @@
 #include "qgsprovidermetadata.h"
 #include "qgsnewvectortabledialog.h"
 #include "qgsdataitemproviderregistry.h"
+#include "qgscolordialog.h"
+#include "qgsdirectoryitem.h"
+#include "qgsdatacollectionitem.h"
+#include "qgsdatabaseschemaitem.h"
+#include "qgsfavoritesitem.h"
+#include "qgslayeritem.h"
+#include "qgsprojectitem.h"
+#include "qgsfieldsitem.h"
+#include "qgsconnectionsitem.h"
 
 #include <QFileInfo>
 #include <QMenu>
@@ -49,6 +58,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QUrl>
 
 QString QgsAppDirectoryItemGuiProvider::name()
 {
@@ -57,12 +67,18 @@ QString QgsAppDirectoryItemGuiProvider::name()
 
 void QgsAppDirectoryItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &, QgsDataItemGuiContext context )
 {
-  if ( item->type() != QgsDataItem::Directory )
+  if ( item->type() != Qgis::BrowserItemType::Directory )
     return;
 
   QgsDirectoryItem *directoryItem = qobject_cast< QgsDirectoryItem * >( item );
 
   QgsSettings settings;
+
+  QAction *actionRefresh = new QAction( tr( "Refresh" ), this );
+  connect( actionRefresh, &QAction::triggered, this, [ = ] { directoryItem->refresh(); } );
+  menu->addAction( actionRefresh );
+
+  menu->addSeparator();
 
   QMenu *newMenu = new QMenu( tr( "New" ), menu );
 
@@ -136,7 +152,7 @@ void QgsAppDirectoryItemGuiProvider::populateContextMenu( QgsDataItem *item, QMe
 
   menu->addSeparator();
 
-  bool inFavDirs = item->parent() && item->parent()->type() == QgsDataItem::Favorites;
+  bool inFavDirs = item->parent() && item->parent()->type() == Qgis::BrowserItemType::Favorites;
   if ( item->parent() && !inFavDirs )
   {
     // only non-root directories can be added as favorites
@@ -158,6 +174,7 @@ void QgsAppDirectoryItemGuiProvider::populateContextMenu( QgsDataItem *item, QMe
         renameFavorite( favoriteItem );
       } );
       menu->addAction( actionRename );
+
       QAction *removeFavoriteAction = new QAction( tr( "Remove Favorite" ), menu );
       connect( removeFavoriteAction, &QAction::triggered, this, [ = ]
       {
@@ -225,15 +242,49 @@ void QgsAppDirectoryItemGuiProvider::populateContextMenu( QgsDataItem *item, QMe
     menu->addMenu( hiddenMenu );
   }
 
-  QAction *fastScanAction = new QAction( tr( "Fast Scan this Directory" ), menu );
+  QAction *actionSetIconColor = new QAction( tr( "Set Color…" ), menu );
+  if ( directoryItem->iconColor().isValid() )
+  {
+    const QPixmap icon = QgsColorButton::createMenuIcon( directoryItem->iconColor(), true );
+    actionSetIconColor->setIcon( icon );
+  }
+  connect( actionSetIconColor, &QAction::triggered, this, [ = ]
+  {
+    changeDirectoryColor( directoryItem );
+  } );
+  menu->addAction( actionSetIconColor );
+  if ( directoryItem->iconColor().isValid() )
+  {
+    QAction *actionClearIconColor = new QAction( tr( "Clear Custom Color" ), menu );
+    connect( actionClearIconColor, &QAction::triggered, this, [ = ]
+    {
+      clearDirectoryColor( directoryItem );
+    } );
+    menu->addAction( actionClearIconColor );
+  }
+
+  QMenu *scanningMenu = new QMenu( tr( "Scanning" ), menu );
+
+  QAction *monitorAction = new QAction( tr( "Monitor for Changes" ), scanningMenu );
+  connect( monitorAction, &QAction::triggered, this, [ = ]
+  {
+    toggleMonitor( directoryItem );
+  } );
+  monitorAction->setCheckable( true );
+  monitorAction->setChecked( directoryItem->isMonitored() );
+  scanningMenu->addAction( monitorAction );
+
+  QAction *fastScanAction = new QAction( tr( "Fast Scan this Directory" ), scanningMenu );
   connect( fastScanAction, &QAction::triggered, this, [ = ]
   {
     toggleFastScan( directoryItem );
   } );
-  menu->addAction( fastScanAction );
   fastScanAction->setCheckable( true );
   fastScanAction->setChecked( settings.value( QStringLiteral( "qgis/scanItemsFastScanUris" ),
                               QStringList() ).toStringList().contains( item->path() ) );
+
+  scanningMenu->addAction( fastScanAction );
+  menu->addMenu( scanningMenu );
 
   menu->addSeparator();
 
@@ -298,6 +349,27 @@ void QgsAppDirectoryItemGuiProvider::renameFavorite( QgsFavoriteItem *favorite )
   favorite->rename( dlg.name() );
 }
 
+void QgsAppDirectoryItemGuiProvider::changeDirectoryColor( QgsDirectoryItem *item )
+{
+  const QColor oldColor = item->iconColor();
+
+  const QColor color = QgsColorDialog::getColor( oldColor, QgisApp::instance(), tr( "Set Color" ), true );
+  if ( !color.isValid() )
+    return;
+
+  // store new color for directory
+  item->setCustomColor( item->dirPath(), color );
+  // and update item's color immediately
+  item->setIconColor( color );
+}
+
+void QgsAppDirectoryItemGuiProvider::clearDirectoryColor( QgsDirectoryItem *item )
+{
+  item->setCustomColor( item->dirPath(), QColor() );
+  // and update item's color immediately
+  item->setIconColor( QColor() );
+}
+
 void QgsAppDirectoryItemGuiProvider::hideDirectory( QgsDirectoryItem *item )
 {
   if ( ! item )
@@ -321,6 +393,14 @@ void QgsAppDirectoryItemGuiProvider::toggleFastScan( QgsDirectoryItem *item )
     fastScanDirs << item->path();
   }
   settings.setValue( QStringLiteral( "qgis/scanItemsFastScanUris" ), fastScanDirs );
+}
+
+void QgsAppDirectoryItemGuiProvider::toggleMonitor( QgsDirectoryItem *item )
+{
+  if ( item->isMonitored() )
+    item->setMonitoring( Qgis::BrowserDirectoryMonitoring::NeverMonitor );
+  else
+    item->setMonitoring( Qgis::BrowserDirectoryMonitoring::AlwaysMonitor );
 }
 
 void QgsAppDirectoryItemGuiProvider::showProperties( QgsDirectoryItem *item, QgsDataItemGuiContext context )
@@ -382,7 +462,7 @@ QString QgsFavoritesItemGuiProvider::name()
 
 void QgsFavoritesItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &, QgsDataItemGuiContext )
 {
-  if ( item->type() != QgsDataItem::Favorites )
+  if ( item->type() != Qgis::BrowserItemType::Favorites )
     return;
 
   QAction *addAction = new QAction( tr( "Add a Directory…" ), menu );
@@ -408,7 +488,7 @@ QString QgsLayerItemGuiProvider::name()
 
 void QgsLayerItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &selectedItems, QgsDataItemGuiContext context )
 {
-  if ( item->type() != QgsDataItem::Layer )
+  if ( item->type() != Qgis::BrowserItemType::Layer )
     return;
 
   QgsLayerItem *layerItem = qobject_cast<QgsLayerItem *>( item );
@@ -520,12 +600,12 @@ void QgsLayerItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *men
   } );
   menu->addAction( addAction );
 
-  if ( item->capabilities2() & QgsDataItem::Delete )
+  if ( item->capabilities2() & Qgis::BrowserItemCapability::Delete )
   {
     QStringList selectedDeletableItemPaths;
     for ( QgsDataItem *selectedItem : selectedItems )
     {
-      if ( qobject_cast<QgsLayerItem *>( selectedItem ) && ( selectedItem->capabilities2() & QgsDataItem::Delete ) )
+      if ( qobject_cast<QgsLayerItem *>( selectedItem ) && ( selectedItem->capabilities2() & Qgis::BrowserItemCapability::Delete ) )
         selectedDeletableItemPaths.append( qobject_cast<QgsLayerItem *>( selectedItem )->uri() );
     }
 
@@ -561,12 +641,12 @@ void QgsLayerItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *men
 
 bool QgsLayerItemGuiProvider::handleDoubleClick( QgsDataItem *item, QgsDataItemGuiContext )
 {
-  if ( !item || item->type() != QgsDataItem::Layer )
+  if ( !item || item->type() != Qgis::BrowserItemType::Layer )
     return false;
 
   if ( QgsLayerItem *layerItem = qobject_cast<QgsLayerItem *>( item ) )
   {
-    const QgsMimeDataUtils::UriList layerUriList = QgsMimeDataUtils::UriList() << layerItem->mimeUri();
+    const QgsMimeDataUtils::UriList layerUriList = layerItem->mimeUris();
     QgisApp::instance()->handleDropUriList( layerUriList );
     return true;
   }
@@ -584,7 +664,7 @@ void QgsLayerItemGuiProvider::addLayersFromItems( const QList<QgsDataItem *> &it
   // TODO - maybe this logic is wrong?
   for ( const QgsDataItem *item : items )
   {
-    if ( item && item->type() == QgsDataItem::Project )
+    if ( item && item->type() == Qgis::BrowserItemType::Project )
     {
       if ( const QgsProjectItem *projectItem = qobject_cast<const QgsProjectItem *>( item ) )
         QgisApp::instance()->openProject( projectItem->path() );
@@ -599,10 +679,10 @@ void QgsLayerItemGuiProvider::addLayersFromItems( const QList<QgsDataItem *> &it
   for ( int i = items.size() - 1; i >= 0; i-- )
   {
     QgsDataItem *item = items.at( i );
-    if ( item && item->type() == QgsDataItem::Layer )
+    if ( item && item->type() == Qgis::BrowserItemType::Layer )
     {
       if ( QgsLayerItem *layerItem = qobject_cast<QgsLayerItem *>( item ) )
-        layerUriList << layerItem->mimeUri();
+        layerUriList.append( layerItem->mimeUris() );
     }
   }
   if ( !layerUriList.isEmpty() )
@@ -667,7 +747,7 @@ QString QgsProjectItemGuiProvider::name()
 
 void QgsProjectItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &, QgsDataItemGuiContext context )
 {
-  if ( !item || item->type() != QgsDataItem::Project )
+  if ( !item || item->type() != Qgis::BrowserItemType::Project )
     return;
 
   if ( QgsProjectItem *projectItem = qobject_cast<QgsProjectItem *>( item ) )
@@ -721,7 +801,7 @@ void QgsProjectItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *m
 
 bool QgsProjectItemGuiProvider::handleDoubleClick( QgsDataItem *item, QgsDataItemGuiContext )
 {
-  if ( !item || item->type() != QgsDataItem::Project )
+  if ( !item || item->type() != Qgis::BrowserItemType::Project )
     return false;
 
   if ( QgsProjectItem *projectItem = qobject_cast<QgsProjectItem *>( item ) )
@@ -744,7 +824,7 @@ void QgsFieldsItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *me
 {
   Q_UNUSED( selectedItems )
 
-  if ( !item || item->type() != QgsDataItem::Type::Fields )
+  if ( !item || item->type() != Qgis::BrowserItemType::Fields )
     return;
 
 
@@ -802,7 +882,7 @@ void QgsFieldItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *men
 {
   Q_UNUSED( selectedItems )
 
-  if ( !item || item->type() != QgsDataItem::Type::Field )
+  if ( !item || item->type() != Qgis::BrowserItemType::Field )
     return;
 
   if ( QgsFieldItem *fieldItem = qobject_cast<QgsFieldItem *>( item ) )
@@ -919,9 +999,9 @@ void QgsDatabaseItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *
             const QString schemaName { dlg.schemaName() };
             const QString geometryColumn { dlg.geometryColumnName() };
             const QgsWkbTypes::Type geometryType { dlg.geometryType() };
-            const bool createSpatialIndex { dlg.createSpatialIndex() &&
+            const bool createSpatialIndex = dlg.createSpatialIndex() &&
                                             geometryType != QgsWkbTypes::NoGeometry &&
-                                            geometryType != QgsWkbTypes::Unknown };
+                                            geometryType != QgsWkbTypes::Unknown;
             const QgsCoordinateReferenceSystem crs { dlg.crs( ) };
             // This flag tells to the provider that field types do not need conversion
             // also prevents  GDAL to create a spatial index by default for GPKG, we are

@@ -80,6 +80,7 @@ QgsRasterCalcDialog::QgsRasterCalcDialog( QgsRasterLayer *rasterLayer, QWidget *
     setExtentSize( rasterLayer->width(), rasterLayer->height(), rasterLayer->extent() );
     mCrsSelector->setCrs( rasterLayer->crs() );
   }
+  mCrsSelector->setShowAccuracyWarnings( true );
 
   mButtonBox->button( QDialogButtonBox::Ok )->setEnabled( false );
 
@@ -182,20 +183,17 @@ void QgsRasterCalcDialog::insertAvailableRasterBands()
 {
   mAvailableRasterBands = QgsRasterCalculatorEntry::rasterEntries().toList();
   mRasterBandsListWidget->clear();
-  for ( const auto &entry : qgis::as_const( mAvailableRasterBands ) )
+  for ( const auto &entry : std::as_const( mAvailableRasterBands ) )
   {
     QgsRasterLayer *rlayer = entry.raster;
-    if ( rlayer && rlayer->dataProvider() && rlayer->providerType() == QLatin1String( "gdal" ) )
+    if ( !mExtentSizeSet ) //set bounding box / resolution of output to the values of the first possible input layer
     {
-      if ( !mExtentSizeSet ) //set bounding box / resolution of output to the values of the first possible input layer
-      {
-        setExtentSize( rlayer->width(), rlayer->height(), rlayer->extent() );
-        mCrsSelector->setCrs( rlayer->crs() );
-      }
-      QListWidgetItem *item = new QListWidgetItem( entry.ref, mRasterBandsListWidget );
-      item->setData( Qt::ToolTipRole, rlayer->publicSource() );
-      mRasterBandsListWidget->addItem( item );
+      setExtentSize( rlayer->width(), rlayer->height(), rlayer->extent() );
+      mCrsSelector->setCrs( rlayer->crs() );
     }
+    QListWidgetItem *item = new QListWidgetItem( entry.ref, mRasterBandsListWidget );
+    item->setData( Qt::ToolTipRole, rlayer->publicSource() );
+    mRasterBandsListWidget->addItem( item );
   }
 }
 

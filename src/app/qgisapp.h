@@ -71,11 +71,6 @@ class QgsMapLayerConfigWidgetFactory;
 class QgsMapOverviewCanvas;
 class QgsMapTip;
 class QgsMapTool;
-class QgsMapToolAddFeature;
-class QgsMapToolDigitizeFeature;
-class QgsMapToolAdvancedDigitizing;
-class QgsMapToolIdentifyAction;
-class QgsMapToolSelect;
 class QgsOptions;
 class QgsPluginLayer;
 class QgsPluginLayer;
@@ -114,6 +109,8 @@ class QgsNetworkAccessManager;
 class QgsGpsConnection;
 class QgsApplicationExitBlockerInterface;
 class QgsAbstractMapToolHandler;
+class QgsAppMapTools;
+class QgsMapToolIdentifyAction;
 
 class QDomDocument;
 class QNetworkReply;
@@ -138,6 +135,7 @@ class QgsLabelingWidget;
 class QgsLayerStylingWidget;
 class QgsDiagramProperties;
 class QgsLocatorWidget;
+class QgsNominatimGeocoder;
 class QgsDataSourceManagerDialog;
 class QgsBrowserGuiModel;
 class QgsBrowserModel;
@@ -242,8 +240,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     /**
      * Open the specified project file; prompt to save previous project if necessary.
-      Used to process a commandline argument, FileOpen or Drop event.
-      */
+     * Used to process a commandline argument, FileOpen or Drop event.
+     */
     void openProject( const QString &fileName );
 
     void openLayerDefinition( const QString &filename );
@@ -541,18 +539,30 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     QAction *actionDataSourceManager() { return mActionDataSourceManager; }
     QAction *actionNewVectorLayer() { return mActionNewVectorLayer; }
+#ifdef HAVE_SPATIALITE
     QAction *actionNewSpatialLiteLayer() { return mActionNewSpatiaLiteLayer; }
+#else
+    QAction *actionNewSpatialLiteLayer() { return nullptr; }
+#endif
     QAction *actionEmbedLayers() { return mActionEmbedLayers; }
     QAction *actionAddOgrLayer() { return mActionAddOgrLayer; }
     QAction *actionAddRasterLayer() { return mActionAddRasterLayer; }
     QAction *actionAddPgLayer() { return mActionAddPgLayer; }
+#ifdef HAVE_SPATIALITE
     QAction *actionAddSpatiaLiteLayer() { return mActionAddSpatiaLiteLayer; }
+#else
+    QAction *actionAddSpatiaLiteLayer() { return nullptr; }
+#endif
     QAction *actionAddWmsLayer() { return mActionAddWmsLayer; }
     QAction *actionAddXyzLayer() { return mActionAddXyzLayer; }
     QAction *actionAddVectorTileLayer() { return mActionAddVectorTileLayer; }
     QAction *actionAddPointCloudLayer() { return mActionAddPointCloudLayer; }
     QAction *actionAddWcsLayer() { return mActionAddWcsLayer; }
+#ifdef HAVE_SPATIALITE
     QAction *actionAddWfsLayer() { return mActionAddWfsLayer; }
+#else
+    QAction *actionAddWfsLayer() { return nullptr; }
+#endif
     QAction *actionAddAfsLayer() { return mActionAddAfsLayer; }
     QAction *actionCopyLayerStyle() { return mActionCopyStyle; }
     QAction *actionPasteLayerStyle() { return mActionPasteStyle; }
@@ -841,7 +851,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void zoomToBookmarkIndex( const QModelIndex & );
 
     //! Returns pointer to the identify map tool - used by identify tool in 3D view
-    QgsMapToolIdentifyAction *identifyMapTool() const { return mMapTools.mIdentify; }
+    QgsMapToolIdentifyAction *identifyMapTool() const;
 
     /**
      * Take screenshots for user documentation
@@ -1107,7 +1117,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
      */
     QgsBrowserGuiModel *browserModel();
 
-    /*
+    /**
      * Change data source for \a layer, a data source selection dialog
      * will be opened and if accepted the data selected source will be
      * applied.
@@ -1119,22 +1129,22 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     /**
      * Add a raster layer directly without prompting user for location
-      The caller must provide information compatible with the provider plugin
-      using the \a uri and \a baseName. The provider can use these
-      parameters in any way necessary to initialize the layer. The \a baseName
-      parameter is used in the Map Legend so it should be formed in a meaningful
-      way.
-      */
+     * The caller must provide information compatible with the provider plugin
+     * using the \a uri and \a baseName. The provider can use these
+     * parameters in any way necessary to initialize the layer. The \a baseName
+     * parameter is used in the Map Legend so it should be formed in a meaningful
+     * way.
+     */
     QgsRasterLayer *addRasterLayer( QString const &uri, QString const &baseName, QString const &providerKey );
 
     /**
      * Add a vector layer directly without prompting user for location
-      The caller must provide information compatible with the provider plugin
-      using the \a vectorLayerPath and \a baseName. The provider can use these
-      parameters in any way necessary to initialize the layer. The \a baseName
-      parameter is used in the Map Legend so it should be formed in a meaningful
-      way.
-      */
+     * The caller must provide information compatible with the provider plugin
+     * using the \a vectorLayerPath and \a baseName. The provider can use these
+     * parameters in any way necessary to initialize the layer. The \a baseName
+     * parameter is used in the Map Legend so it should be formed in a meaningful
+     * way.
+     */
     QgsVectorLayer *addVectorLayer( const QString &vectorLayerPath, const QString &baseName, const QString &providerKey );
 
     /**
@@ -1563,8 +1573,10 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void newVectorLayer();
     //! Create a new memory layer
     void newMemoryLayer();
+#ifdef HAVE_SPATIALITE
     //! Create a new empty SpatiaLite layer
     void newSpatialiteLayer();
+#endif
     //! Create a new empty GeoPackage layer
     void newGeoPackageLayer();
 
@@ -1756,7 +1768,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     void selectionModeChanged( QgsMapToolSelect::Mode mode );
 
-    void displayMapToolMessage( const QString &message, Qgis::MessageLevel level = Qgis::Info );
+    void displayMapToolMessage( const QString &message, Qgis::MessageLevel level = Qgis::MessageLevel::Info );
     void displayMessage( const QString &title, const QString &message, Qgis::MessageLevel level );
     void removeMapToolMessage();
     void updateMouseCoordinatePrecision();
@@ -1953,7 +1965,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
      * \param categories style categories
      * \since QGIS 3.12
      */
-    void vectorLayerStyleLoaded( const QgsMapLayer::StyleCategories categories );
+    void vectorLayerStyleLoaded( QgsVectorLayer *vl, const QgsMapLayer::StyleCategories categories );
 
     //! Enable or disable event tracing (for debugging)
     void toggleEventTracing();
@@ -1965,10 +1977,15 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void enableDigitizeWithCurve( bool enable );
 
     /**
-     * Enables the action that toggles digitizing with curve
-     * \since QGIS 3.16
+     * Enables or disables stream digitizing
+     * \since QGIS 3.20
      */
-    void enableDigitizeWithCurveAction( bool enable );
+    void enableStreamDigitizing( bool enable );
+
+    /**
+     * Enables the action that toggles digitizing with curve
+     */
+    void enableDigitizeTechniqueActions( bool enable, QAction *triggeredFromToolAction = nullptr );
 
 #ifdef HAVE_GEOREFERENCER
     void showGeoreferencer();
@@ -2197,7 +2214,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
                                          const QString &layerName,
                                          const QString &encoding,
                                          const QString &vectorFileName )> &onSuccess, const std::function< void ( int error, const QString &errorMessage ) > &onFailure,
-                                     int dialogOptions = QgsVectorLayerSaveAsDialog::AllOptions,
+                                     QgsVectorLayerSaveAsDialog::Options dialogOptions = QgsVectorLayerSaveAsDialog::AllOptions,
                                      const QString &dialogTitle = QString() );
 
     //! Sets project properties, including map untis
@@ -2232,7 +2249,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void setupConnections();
     void initLayerTreeView();
     void createOverview();
-    void createCanvasTools();
+    void setupCanvasTools();
     void createMapTips();
     void createDecorations();
     void init3D();
@@ -2389,77 +2406,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QAction *mWindowAction = nullptr;
 #endif
 
-    class Tools
-    {
-      public:
-
-        Tools() = default;
-
-        QgsMapTool *mZoomIn = nullptr;
-        QgsMapTool *mZoomOut = nullptr;
-        QgsMapTool *mPan = nullptr;
-        QgsMapToolIdentifyAction *mIdentify = nullptr;
-        QgsMapTool *mFeatureAction = nullptr;
-        QgsMapTool *mMeasureDist = nullptr;
-        QgsMapTool *mMeasureArea = nullptr;
-        QgsMapTool *mMeasureAngle = nullptr;
-        QgsMapToolAddFeature *mAddFeature = nullptr;
-        QgsMapTool *mCircularStringCurvePoint = nullptr;
-        QgsMapTool *mCircularStringRadius = nullptr;
-        QgsMapTool *mCircle2Points = nullptr;
-        QgsMapTool *mCircle3Points = nullptr;
-        QgsMapTool *mCircle3Tangents = nullptr;
-        QgsMapTool *mCircle2TangentsPoint = nullptr;
-        QgsMapTool *mCircleCenterPoint = nullptr;
-        QgsMapTool *mEllipseCenter2Points = nullptr;
-        QgsMapTool *mEllipseCenterPoint = nullptr;
-        QgsMapTool *mEllipseExtent = nullptr;
-        QgsMapTool *mEllipseFoci = nullptr;
-        QgsMapTool *mRectangleCenterPoint = nullptr;
-        QgsMapTool *mRectangleExtent = nullptr;
-        QgsMapTool *mRectangle3PointsDistance = nullptr;
-        QgsMapTool *mRectangle3PointsProjected = nullptr;
-        QgsMapTool *mRegularPolygon2Points = nullptr;
-        QgsMapTool *mRegularPolygonCenterPoint = nullptr;
-        QgsMapTool *mRegularPolygonCenterCorner = nullptr;
-        QgsMapTool *mMoveFeature = nullptr;
-        QgsMapTool *mMoveFeatureCopy = nullptr;
-        QgsMapTool *mOffsetCurve = nullptr;
-        QgsMapTool *mReshapeFeatures = nullptr;
-        QgsMapTool *mSplitFeatures = nullptr;
-        QgsMapTool *mSplitParts = nullptr;
-        QgsMapToolSelect *mSelectFeatures = nullptr;
-        QgsMapToolSelect *mSelectPolygon = nullptr;
-        QgsMapToolSelect *mSelectFreehand = nullptr;
-        QgsMapToolSelect *mSelectRadius = nullptr;
-        QgsMapTool *mVertexAdd = nullptr;
-        QgsMapTool *mVertexMove = nullptr;
-        QgsMapTool *mVertexDelete = nullptr;
-        QgsMapTool *mAddRing = nullptr;
-        QgsMapTool *mFillRing = nullptr;
-        QgsMapTool *mAddPart = nullptr;
-        QgsMapTool *mSimplifyFeature = nullptr;
-        QgsMapTool *mDeleteRing = nullptr;
-        QgsMapTool *mDeletePart = nullptr;
-        QgsMapTool *mVertexTool = nullptr;
-        QgsMapTool *mVertexToolActiveLayer = nullptr;
-        QgsMapTool *mRotatePointSymbolsTool = nullptr;
-        QgsMapTool *mOffsetPointSymbolTool = nullptr;
-        QgsMapTool *mAnnotation = nullptr;
-        QgsMapTool *mFormAnnotation = nullptr;
-        QgsMapTool *mHtmlAnnotation = nullptr;
-        QgsMapTool *mSvgAnnotation = nullptr;
-        QgsMapTool *mTextAnnotation = nullptr;
-        QgsMapTool *mPinLabels = nullptr;
-        QgsMapTool *mShowHideLabels = nullptr;
-        QgsMapTool *mMoveLabel = nullptr;
-        QgsMapTool *mRotateFeature = nullptr;
-        QgsMapTool *mScaleFeature = nullptr;
-        QgsMapTool *mRotateLabel = nullptr;
-        QgsMapTool *mChangeLabelProperties = nullptr;
-        QgsMapTool *mReverseLine = nullptr ;
-        QgsMapTool *mTrimExtendFeature = nullptr ;
-    } mMapTools;
+    std::unique_ptr< QgsAppMapTools > mMapTools;
 
     QgsMapTool *mNonEditMapTool = nullptr;
 
@@ -2536,14 +2483,14 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     /**
      * String containing supporting vector file formats
-      Suitable for a QFileDialog file filter.  Build in ctor.
-      */
+     * Suitable for a QFileDialog file filter.  Build in ctor.
+     */
     QString mVectorFileFilter;
 
     /**
      * String containing supporting raster file formats
-      Suitable for a QFileDialog file filter.  Build in ctor.
-      */
+     * Suitable for a QFileDialog file filter.  Build in ctor.
+     */
     QString mRasterFileFilter;
 
     //! Timer for map tips
@@ -2598,6 +2545,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QgsDockWidget *mDevToolsDock = nullptr;
     QgsDevToolsPanelWidget *mDevToolsWidget = nullptr;
 
+    QToolButton *mDigitizeModeToolButton = nullptr;
+
     //! Persistent tile scale slider
     QgsTileScaleWidget *mpTileScaleWidget = nullptr;
 
@@ -2643,7 +2592,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QgsGeoreferencerMainWindow *mGeoreferencer = nullptr;
 #endif
 
-    QList<QgsMapLayerConfigWidgetFactory *> mMapLayerPanelFactories;
+    QList<const QgsMapLayerConfigWidgetFactory *> mMapLayerPanelFactories;
     QList<QPointer<QgsOptionsWidgetFactory>> mOptionsWidgetFactories;
     QList<QPointer<QgsOptionsWidgetFactory>> mProjectPropertiesWidgetFactories;
 
@@ -2677,6 +2626,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     void tapAndHoldTriggered( QTapAndHoldGesture *gesture );
 
     QgsLocatorWidget *mLocatorWidget = nullptr;
+    std::unique_ptr<QgsNominatimGeocoder> mNominatimGeocoder;
 
     QgsStatusBar *mStatusBar = nullptr;
 

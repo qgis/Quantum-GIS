@@ -19,6 +19,7 @@ macro (ADD_QGIS_TEST testname testsrc)
   set(qgis_${testname}_SRCS ${testsrc} ${util_SRCS})
   add_custom_target(qgis_${testname}moc ALL DEPENDS ${qgis_${testname}_MOC_SRCS})
   add_executable(qgis_${testname} ${qgis_${testname}_SRCS})
+  target_compile_features(qgis_${testname} PRIVATE cxx_std_17)
   target_link_libraries(qgis_${testname}
     ${Qt5Core_LIBRARIES}
     ${Qt5Xml_LIBRARIES}
@@ -63,8 +64,6 @@ ADD_QGIS_TEST(attributetabletest testqgsattributetable.cpp)
 ADD_QGIS_TEST(applocatorfilters testqgsapplocatorfilters.cpp)
 ADD_QGIS_TEST(decorationscalebar testqgsdecorationscalebar.cpp)
 ADD_QGIS_TEST(fieldcalculatortest testqgsfieldcalculator.cpp)
-ADD_QGIS_TEST(maptooladdfeatureline testqgsmaptooladdfeatureline.cpp)
-ADD_QGIS_TEST(maptooladdfeaturepoint testqgsmaptooladdfeaturepoint.cpp)
 ADD_QGIS_TEST(maptoolidentifyaction testqgsmaptoolidentifyaction.cpp)
 ADD_QGIS_TEST(maptoollabel testqgsmaptoollabel.cpp)
 ADD_QGIS_TEST(maptoolselect testqgsmaptoolselect.cpp)
@@ -89,3 +88,6 @@ ADD_QGIS_TEST(layoutvaliditychecks testqgsapplayoutvaliditychecks.cpp)
 ADD_QGIS_TEST(meshcalculator testqgsmeshcalculatordialog.cpp)
 ADD_QGIS_TEST(gpsinformationwidget testqgsgpsinformationwidget.cpp)
 ADD_QGIS_TEST(labelpropertydialog testqgslabelpropertydialog.cpp)
+
+add_subdirectory(maptooladdfeaturepoint)
+add_subdirectory(maptooladdfeatureline)

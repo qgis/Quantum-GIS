@@ -83,7 +83,7 @@ QgsPointCloudRenderer *QgsPointCloudRgbRendererWidget::renderer()
     return nullptr;
   }
 
-  std::unique_ptr< QgsPointCloudRgbRenderer > renderer = qgis::make_unique< QgsPointCloudRgbRenderer >();
+  std::unique_ptr< QgsPointCloudRgbRenderer > renderer = std::make_unique< QgsPointCloudRgbRenderer >();
   renderer->setRedAttribute( mRedAttributeComboBox->currentAttribute() );
   renderer->setGreenAttribute( mGreenAttributeComboBox->currentAttribute() );
   renderer->setBlueAttribute( mBlueAttributeComboBox->currentAttribute() );
@@ -127,7 +127,7 @@ void QgsPointCloudRgbRendererWidget::setCustomMinMaxValues( QgsPointCloudRgbRend
   double redMax = QgsDoubleValidator::toDouble( mRedMaxLineEdit->text(), &redMaxOk );
   if ( redMinOk && redMaxOk && !mRedAttributeComboBox->currentAttribute().isEmpty() )
   {
-    redEnhancement = new QgsContrastEnhancement( Qgis::UnknownDataType );
+    redEnhancement = new QgsContrastEnhancement( Qgis::DataType::UnknownDataType );
     redEnhancement->setMinimumValue( redMin );
     redEnhancement->setMaximumValue( redMax );
   }
@@ -137,7 +137,7 @@ void QgsPointCloudRgbRendererWidget::setCustomMinMaxValues( QgsPointCloudRgbRend
   double greenMax = QgsDoubleValidator::toDouble( mGreenMaxLineEdit->text(), &greenMaxOk );
   if ( greenMinOk && greenMaxOk && !mGreenAttributeComboBox->currentAttribute().isEmpty() )
   {
-    greenEnhancement = new QgsContrastEnhancement( Qgis::UnknownDataType );
+    greenEnhancement = new QgsContrastEnhancement( Qgis::DataType::UnknownDataType );
     greenEnhancement->setMinimumValue( greenMin );
     greenEnhancement->setMaximumValue( greenMax );
   }
@@ -147,7 +147,7 @@ void QgsPointCloudRgbRendererWidget::setCustomMinMaxValues( QgsPointCloudRgbRend
   double blueMax = QgsDoubleValidator::toDouble( mBlueMaxLineEdit->text(), &blueMaxOk );
   if ( blueMinOk && blueMaxOk && !mBlueAttributeComboBox->currentAttribute().isEmpty() )
   {
-    blueEnhancement = new QgsContrastEnhancement( Qgis::UnknownDataType );
+    blueEnhancement = new QgsContrastEnhancement( Qgis::DataType::UnknownDataType );
     blueEnhancement->setMinimumValue( blueMin );
     blueEnhancement->setMaximumValue( blueMax );
   }

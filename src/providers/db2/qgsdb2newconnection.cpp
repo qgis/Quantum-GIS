@@ -19,7 +19,8 @@
 #include <QMessageBox>
 #include <QSqlDatabase>
 #include <QSqlError>
-#include <QRegExpValidator>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 
 #include "qgssettings.h"
 #include "qgslogger.h"
@@ -80,7 +81,7 @@ QgsDb2NewConnection::QgsDb2NewConnection( QWidget *parent, const QString &connNa
 
     txtName->setText( connName );
   }
-  txtName->setValidator( new QRegExpValidator( QRegExp( "[^\\/]+" ), txtName ) );
+  txtName->setValidator( new QRegularExpressionValidator( QRegularExpression( QStringLiteral( "[^\\/]+" ) ), txtName ) );
 }
 
 //! Autoconnected SLOTS
@@ -178,7 +179,7 @@ bool QgsDb2NewConnection::testConnection()
   if ( !rc )
   {
     bar->pushMessage( tr( "Error: %1." ).arg( errMsg ),
-                      Qgis::Warning );
+                      Qgis::MessageLevel::Warning );
     QgsDebugMsg( "errMsg: " + errMsg );
     return false;
   }
@@ -188,14 +189,14 @@ bool QgsDb2NewConnection::testConnection()
   {
     QgsDebugMsg( "connection open succeeded " + connInfo );
     bar->pushMessage( tr( "Connection to %1 was successful." ).arg( txtName->text() ),
-                      Qgis::Info );
+                      Qgis::MessageLevel::Info );
     return true;
   }
   else
   {
     QgsDebugMsg( "connection open failed: " + errMsg );
     bar->pushMessage( tr( "Connection failed: %1." ).arg( errMsg ),
-                      Qgis::Warning );
+                      Qgis::MessageLevel::Warning );
     return false;
   }
 }

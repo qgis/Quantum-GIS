@@ -31,6 +31,9 @@
 #include <pdal/io/LasHeader.hpp>
 #include <pdal/Options.hpp>
 
+#include <QQueue>
+#include <QFileInfo>
+#include <QDir>
 
 #define PROVIDER_KEY QStringLiteral( "pdal" )
 #define PROVIDER_DESCRIPTION QStringLiteral( "PDAL point cloud data provider" )
@@ -46,7 +49,7 @@ QgsPdalProvider::QgsPdalProvider(
 {
   std::unique_ptr< QgsScopedRuntimeProfile > profile;
   if ( QgsApplication::profiler()->groupIsActive( QStringLiteral( "projectload" ) ) )
-    profile = qgis::make_unique< QgsScopedRuntimeProfile >( tr( "Open data source" ), QStringLiteral( "projectload" ) );
+    profile = std::make_unique< QgsScopedRuntimeProfile >( tr( "Open data source" ), QStringLiteral( "projectload" ) );
 
   mIsValid = load( uri );
   loadIndex( );
@@ -100,7 +103,7 @@ void QgsPdalProvider::generateIndex()
 
   const QString outputDir = _outdir( dataSourceUri() );
 
-  QgsPdalEptGenerationTask *generationTask = new QgsPdalEptGenerationTask( dataSourceUri(), outputDir, QStringLiteral( "( " ) + QFileInfo( dataSourceUri() ).fileName() + QStringLiteral( " )" ) );
+  QgsPdalEptGenerationTask *generationTask = new QgsPdalEptGenerationTask( dataSourceUri(), outputDir, QFileInfo( dataSourceUri() ).fileName() );
 
   connect( generationTask, &QgsPdalEptGenerationTask::taskTerminated, this, &QgsPdalProvider::onGenerateIndexFailed );
   connect( generationTask, &QgsPdalEptGenerationTask::taskCompleted, this, &QgsPdalProvider::onGenerateIndexFinished );
@@ -187,7 +190,7 @@ QVariant QgsPdalProvider::metadataStatistic( const QString &attribute, QgsStatis
     return QVariant();
 }
 
-int QgsPdalProvider::pointCount() const
+qint64 QgsPdalProvider::pointCount() const
 {
   return mPointCount;
 }
@@ -331,9 +334,14 @@ QString QgsPdalProviderMetadata::filters( QgsProviderMetadata::FilterType type )
 
     case QgsProviderMetadata::FilterType::FilterPointCloud:
       // TODO get the available/supported filters from PDAL library
-      return QObject::tr( "PDAL Point Clouds" ) + QStringLiteral( " (*.laz *.las)" );
+      return QObject::tr( "PDAL Point Clouds" ) + QStringLiteral( " (*.laz *.las *.LAZ *.LAS)" );
   }
   return QString();
+}
+
+QgsProviderMetadata::ProviderCapabilities QgsPdalProviderMetadata::providerCapabilities() const
+{
+  return FileBasedUris;
 }
 
 QString QgsPdalProviderMetadata::encodeUri( const QVariantMap &parts ) const

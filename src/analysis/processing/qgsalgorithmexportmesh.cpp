@@ -27,6 +27,8 @@
 #include "qgsrasterfilewriter.h"
 #include "qgslinestring.h"
 
+#include <QTextStream>
+
 ///@cond PRIVATE
 
 
@@ -414,7 +416,7 @@ QgsGeometry QgsExportMeshFacesAlgorithm::meshElement( int index ) const
   QVector<QgsPoint> vertices( face.size() );
   for ( int i = 0; i < face.size(); ++i )
     vertices[i] = mNativeMesh.vertex( face.at( i ) );
-  std::unique_ptr<QgsPolygon> polygon = qgis::make_unique<QgsPolygon>();
+  std::unique_ptr<QgsPolygon> polygon = std::make_unique<QgsPolygon>();
   polygon->setExteriorRing( new QgsLineString( vertices ) );
   return QgsGeometry( polygon.release() );
 }
@@ -823,7 +825,7 @@ QVariantMap QgsMeshRasterizeAlgorithm::processAlgorithm( const QVariantMap &para
   rasterFileWriter.setOutputFormat( outputFormat );
 
   std::unique_ptr<QgsRasterDataProvider> rasterDataProvider(
-    rasterFileWriter.createMultiBandRaster( Qgis::Float64, width, height, extent, mTransform.destinationCrs(), mDataPerGroup.count() ) );
+    rasterFileWriter.createMultiBandRaster( Qgis::DataType::Float64, width, height, extent, mTransform.destinationCrs(), mDataPerGroup.count() ) );
   rasterDataProvider->setEditable( true );
 
   for ( int i = 0; i < mDataPerGroup.count(); ++i )
@@ -1274,10 +1276,13 @@ QVariantMap QgsMeshExportCrossSection::processAlgorithm( const QVariantMap &para
 
   QString outputFileName = parameterAsFileOutput( parameters, QStringLiteral( "OUTPUT" ), context );
   QFile file( outputFileName );
-  if ( ! file.open( QIODevice::WriteOnly ) )
+  if ( ! file.open( QIODevice::WriteOnly | QIODevice::Truncate ) )
     throw QgsProcessingException( QObject::tr( "Unable to create the outputfile" ) );
 
   QTextStream textStream( &file );
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  textStream.setCodec( "UTF-8" );
+#endif
   QStringList header;
   header << QStringLiteral( "fid" ) << QStringLiteral( "x" ) << QStringLiteral( "y" ) << QObject::tr( "offset" );
   for ( const DataGroup &datagroup : mDataPerGroup )
@@ -1371,7 +1376,7 @@ QString QgsMeshExportTimeSeries::name() const
 
 QString QgsMeshExportTimeSeries::displayName() const
 {
-  return QObject::tr( "Export dataset values time series values on points from mesh" );
+  return QObject::tr( "Export time series values from points of a mesh dataset" );
 }
 
 QString QgsMeshExportTimeSeries::group() const
@@ -1586,10 +1591,13 @@ QVariantMap QgsMeshExportTimeSeries::processAlgorithm( const QVariantMap &parame
 
   QString outputFileName = parameterAsFileOutput( parameters, QStringLiteral( "OUTPUT" ), context );
   QFile file( outputFileName );
-  if ( ! file.open( QIODevice::WriteOnly ) )
+  if ( ! file.open( QIODevice::WriteOnly | QIODevice::Truncate ) )
     throw QgsProcessingException( QObject::tr( "Unable to create the outputfile" ) );
 
   QTextStream textStream( &file );
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  textStream.setCodec( "UTF-8" );
+#endif
   QStringList header;
   header << QStringLiteral( "fid" ) << QStringLiteral( "x" ) << QStringLiteral( "y" ) << QObject::tr( "time" );
 

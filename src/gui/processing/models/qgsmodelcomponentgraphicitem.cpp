@@ -933,7 +933,7 @@ QColor QgsModelChildAlgorithmGraphicItem::strokeColor( QgsModelComponentGraphicI
 
 QColor QgsModelChildAlgorithmGraphicItem::textColor( QgsModelComponentGraphicItem::State ) const
 {
-  return mIsValid ? ( dynamic_cast< const QgsProcessingModelChildAlgorithm * >( component() )->isActive() ? Qt::black : Qt::gray ) : QColor( 255, 255, 255 );
+  return mIsValid ? ( qgis::down_cast< const QgsProcessingModelChildAlgorithm * >( component() )->isActive() ? Qt::black : Qt::gray ) : QColor( 255, 255, 255 );
 }
 
 QPixmap QgsModelChildAlgorithmGraphicItem::iconPixmap() const
@@ -994,7 +994,7 @@ QString QgsModelChildAlgorithmGraphicItem::linkPointText( Qt::Edge edge, int ind
           // something goes wrong and tried to link to an not existing output
           QgsMessageLog::logMessage(
             tr( "Cannot link output for child: %1" ).arg( child->algorithm()->name() ),
-            "QgsModelChildAlgorithmGraphicItem", Qgis::Warning, true );
+            "QgsModelChildAlgorithmGraphicItem", Qgis::MessageLevel::Warning, true );
           return QString();
         }
 
@@ -1020,7 +1020,7 @@ QString QgsModelChildAlgorithmGraphicItem::linkPointText( Qt::Edge edge, int ind
           // something goes wrong and tried to link to an not existing source parameter
           QgsMessageLog::logMessage(
             tr( "Cannot link source for child: %1" ).arg( child->algorithm()->name() ),
-            "QgsModelChildAlgorithmGraphicItem", Qgis::Warning, true );
+            "QgsModelChildAlgorithmGraphicItem", Qgis::MessageLevel::Warning, true );
           return QString();
         }
 

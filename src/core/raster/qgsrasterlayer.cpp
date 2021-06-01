@@ -43,6 +43,7 @@ email                : tim at linfiniti.com
 #include "qgsrasterresamplefilter.h"
 #include "qgsrastershader.h"
 #include "qgsreadwritecontext.h"
+#include "qgsxmlutils.h"
 #include "qgsrectangle.h"
 #include "qgsrendercontext.h"
 #include "qgssinglebandcolordatarenderer.h"
@@ -55,6 +56,7 @@ email                : tim at linfiniti.com
 #include "qgscubicrasterresampler.h"
 #include "qgsrasterlayertemporalproperties.h"
 #include "qgsruntimeprofiler.h"
+#include "qgsmaplayerfactory.h"
 
 #include <cmath>
 #include <cstdio>
@@ -74,12 +76,11 @@ email                : tim at linfiniti.com
 #include <QImage>
 #include <QLabel>
 #include <QList>
-#include <QMatrix>
-#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
 #include <QRegExp>
 #include <QSlider>
+#include <QUrl>
 
 #define ERR(message) QGS_ERROR_MESSAGE(message,"Raster layer")
 
@@ -126,8 +127,12 @@ QgsRasterLayer::QgsRasterLayer( const QString &uri,
   setProviderType( providerKey );
 
   QgsDataProvider::ProviderOptions providerOptions { options.transformContext };
-
-  setDataSource( uri, baseName, providerKey, providerOptions, options.loadDefaultStyle );
+  QgsDataProvider::ReadFlags providerFlags = QgsDataProvider::ReadFlags();
+  if ( options.loadDefaultStyle )
+  {
+    providerFlags |= QgsDataProvider::FlagLoadDefaultStyle;
+  }
+  setDataSource( uri, baseName, providerKey, providerOptions, providerFlags );
 
   if ( isValid() )
   {
@@ -310,6 +315,9 @@ QgsLegendColorList QgsRasterLayer::legendSymbologyItems() const
 
 QString QgsRasterLayer::htmlMetadata() const
 {
+  if ( !mDataProvider )
+    return QString();
+
   QgsLayerMetadataFormatter htmlFormatter( metadata() );
   QString myMetadata = QStringLiteral( "<html><head></head>\n<body>\n" );
 
@@ -343,23 +351,17 @@ QString QgsRasterLayer::htmlMetadata() const
   if ( publicSource() != path || !isLocalPath )
     myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Source" ) + QStringLiteral( "</td><td>%1" ).arg( publicSource() != path ? publicSource() : path ) + QStringLiteral( "</td></tr>\n" );
 
-  // EPSG
-  myMetadata += QStringLiteral( "<tr><td class=\"highlight\">" ) % tr( "CRS" ) + QStringLiteral( "</td><td>" );
-  if ( crs().isValid() )
-  {
-    myMetadata += crs().userFriendlyIdentifier( QgsCoordinateReferenceSystem::FullString ) % QStringLiteral( " - " );
-    if ( crs().isGeographic() )
-      myMetadata += tr( "Geographic" );
-    else
-      myMetadata += tr( "Projected" );
-  }
-  myMetadata += QStringLiteral( "</td></tr>\n" ) %
+  myMetadata += QLatin1String( "</table>\n<br><br>" );
+
+  // CRS
+  myMetadata += crsHtmlMetadata();
+
+  myMetadata += QStringLiteral( "<h1>" ) + tr( "Properties" ) + QStringLiteral( "</h1>\n<hr>\n" ) + QStringLiteral( "<table class=\"list-view\">\n" );
+
+  myMetadata += QStringLiteral( "\n" ) %
 
                 // Extent
                 QStringLiteral( "<tr><td class=\"highlight\">" ) % tr( "Extent" ) % QStringLiteral( "</td><td>" ) % extent().toString() % QStringLiteral( "</td></tr>\n" ) %
-
-                // unit
-                QStringLiteral( "<tr><td class=\"highlight\">" ) % tr( "Unit" ) % QStringLiteral( "</td><td>" ) % QgsUnitTypes::toString( crs().mapUnits() ) % QStringLiteral( "</td></tr>\n" ) %
 
                 // Raster Width
                 QStringLiteral( "<tr><td class=\"highlight\">" ) % tr( "Width" ) % QStringLiteral( "</td><td>" );
@@ -382,37 +384,37 @@ QString QgsRasterLayer::htmlMetadata() const
   // Just use the first band
   switch ( mDataProvider->sourceDataType( 1 ) )
   {
-    case Qgis::Byte:
+    case Qgis::DataType::Byte:
       myMetadata += tr( "Byte - Eight bit unsigned integer" );
       break;
-    case Qgis::UInt16:
+    case Qgis::DataType::UInt16:
       myMetadata += tr( "UInt16 - Sixteen bit unsigned integer " );
       break;
-    case Qgis::Int16:
+    case Qgis::DataType::Int16:
       myMetadata += tr( "Int16 - Sixteen bit signed integer " );
       break;
-    case Qgis::UInt32:
+    case Qgis::DataType::UInt32:
       myMetadata += tr( "UInt32 - Thirty two bit unsigned integer " );
       break;
-    case Qgis::Int32:
+    case Qgis::DataType::Int32:
       myMetadata += tr( "Int32 - Thirty two bit signed integer " );
       break;
-    case Qgis::Float32:
+    case Qgis::DataType::Float32:
       myMetadata += tr( "Float32 - Thirty two bit floating point " );
       break;
-    case Qgis::Float64:
+    case Qgis::DataType::Float64:
       myMetadata += tr( "Float64 - Sixty four bit floating point " );
       break;
-    case Qgis::CInt16:
+    case Qgis::DataType::CInt16:
       myMetadata += tr( "CInt16 - Complex Int16 " );
       break;
-    case Qgis::CInt32:
+    case Qgis::DataType::CInt32:
       myMetadata += tr( "CInt32 - Complex Int32 " );
       break;
-    case Qgis::CFloat32:
+    case Qgis::DataType::CFloat32:
       myMetadata += tr( "CFloat32 - Complex Float32 " );
       break;
-    case Qgis::CFloat64:
+    case Qgis::DataType::CFloat64:
       myMetadata += tr( "CFloat64 - Complex Float64 " );
       break;
     default:
@@ -596,7 +598,7 @@ void QgsRasterLayer::setOpacity( double opacity )
 
   mPipe.renderer()->setOpacity( opacity );
   emit opacityChanged( opacity );
-  emit styleChanged();
+  emitStyleChanged();
 }
 
 double QgsRasterLayer::opacity() const
@@ -639,7 +641,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
 
   std::unique_ptr< QgsScopedRuntimeProfile > profile;
   if ( QgsApplication::profiler()->groupIsActive( QStringLiteral( "projectload" ) ) )
-    profile = qgis::make_unique< QgsScopedRuntimeProfile >( tr( "Create %1 provider" ).arg( provider ), QStringLiteral( "projectload" ) );
+    profile = std::make_unique< QgsScopedRuntimeProfile >( tr( "Create %1 provider" ).arg( provider ), QStringLiteral( "projectload" ) );
 
   mDataProvider = qobject_cast< QgsRasterDataProvider * >( QgsProviderRegistry::instance()->createProvider( mProviderKey, mDataSource, options, flags ) );
   if ( !mDataProvider )
@@ -672,13 +674,14 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
     mDataSource = mDataProvider->dataSourceUri();
   }
 
-  // get the extent
-  QgsRectangle mbr = mDataProvider->extent();
+  if ( !( flags & QgsDataProvider::SkipGetExtent ) )
+  {
+    // get the extent
+    const QgsRectangle mbr = mDataProvider->extent();
 
-  // show the extent
-  QgsDebugMsgLevel( "Extent of layer: " + mbr.toString(), 4 );
-  // store the extent
-  setExtent( mbr );
+    // store the extent
+    setExtent( mbr );
+  }
 
   // upper case the first letter of the layer name
   QgsDebugMsgLevel( "mLayerName: " + name(), 4 );
@@ -697,7 +700,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
   //decide what type of layer this is...
   //TODO Change this to look at the color interp and palette interp to decide which type of layer it is
   QgsDebugMsgLevel( "bandCount = " + QString::number( mDataProvider->bandCount() ), 4 );
-  QgsDebugMsgLevel( "dataType = " + QString::number( mDataProvider->dataType( 1 ) ), 4 );
+  QgsDebugMsgLevel( "dataType = " + qgsEnumValueToKey< Qgis::DataType >( mDataProvider->dataType( 1 ) ), 4 );
   if ( ( mDataProvider->bandCount() > 1 ) )
   {
     // handle singleband gray with alpha
@@ -714,8 +717,8 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
       mRasterType = Multiband;
     }
   }
-  else if ( mDataProvider->dataType( 1 ) == Qgis::ARGB32
-            ||  mDataProvider->dataType( 1 ) == Qgis::ARGB32_Premultiplied )
+  else if ( mDataProvider->dataType( 1 ) == Qgis::DataType::ARGB32
+            ||  mDataProvider->dataType( 1 ) == Qgis::DataType::ARGB32_Premultiplied )
   {
     mRasterType = ColorLayer;
   }
@@ -875,13 +878,20 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
 
 }
 
-void QgsRasterLayer::setDataSource( const QString &dataSource, const QString &baseName, const QString &provider, const QgsDataProvider::ProviderOptions &options, bool loadDefaultStyleFlag )
+void QgsRasterLayer::setDataSourcePrivate( const QString &dataSource, const QString &baseName, const QString &provider,
+    const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
 {
   bool hadRenderer( renderer() );
 
   QDomImplementation domImplementation;
   QDomDocumentType documentType;
   QString errorMsg;
+
+  bool loadDefaultStyleFlag = false;
+  if ( flags & QgsDataProvider::FlagLoadDefaultStyle )
+  {
+    loadDefaultStyleFlag = true;
+  }
 
   // Store the original style
   if ( hadRenderer && ! loadDefaultStyleFlag )
@@ -921,12 +931,6 @@ void QgsRasterLayer::setDataSource( const QString &dataSource, const QString &ba
   mDataSource = dataSource;
   mLayerName = baseName;
 
-  QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags();
-  if ( mReadFlags & QgsMapLayer::FlagTrustLayerMetadata )
-  {
-    flags |= QgsDataProvider::FlagTrustDataSource;
-  }
-
   setDataProvider( provider, options, flags );
 
   if ( mDataProvider )
@@ -955,7 +959,7 @@ void QgsRasterLayer::setDataSource( const QString &dataSource, const QString &ba
       {
         restoredStyle = true;
         emit repaintRequested();
-        emit styleChanged();
+        emitStyleChanged();
         emit rendererChanged();
       }
     }
@@ -965,8 +969,6 @@ void QgsRasterLayer::setDataSource( const QString &dataSource, const QString &ba
       setDefaultContrastEnhancement();
     }
   }
-  emit dataSourceChanged();
-  emit dataChanged();
 }
 
 void QgsRasterLayer::closeDataProvider()
@@ -992,6 +994,67 @@ void QgsRasterLayer::computeMinMax( int band,
   if ( limits == QgsRasterMinMaxOrigin::MinMax )
   {
     QgsRasterBandStats myRasterBandStats = mDataProvider->bandStatistics( band, QgsRasterBandStats::Min | QgsRasterBandStats::Max, extent, sampleSize );
+    // Check if statistics were actually gathered, None means a failure
+    if ( myRasterBandStats.statsGathered == QgsRasterBandStats::Stats::None )
+    {
+      // Best guess we can do
+      switch ( mDataProvider->dataType( band ) )
+      {
+        case Qgis::DataType::Byte:
+        {
+          myRasterBandStats.minimumValue = 0;
+          myRasterBandStats.maximumValue = 255;
+          break;
+        }
+        case Qgis::DataType::UInt16:
+        {
+          myRasterBandStats.minimumValue = 0;
+          myRasterBandStats.maximumValue = std::numeric_limits<uint16_t>::max();
+          break;
+        }
+        case Qgis::DataType::UInt32:
+        {
+          myRasterBandStats.minimumValue = 0;
+          myRasterBandStats.maximumValue = std::numeric_limits<uint32_t>::max();
+          break;
+        }
+        case Qgis::DataType::Int16:
+        case Qgis::DataType::CInt16:
+        {
+          myRasterBandStats.minimumValue = std::numeric_limits<int16_t>::lowest();
+          myRasterBandStats.maximumValue = std::numeric_limits<int16_t>::max();
+          break;
+        }
+        case Qgis::DataType::Int32:
+        case Qgis::DataType::CInt32:
+        {
+          myRasterBandStats.minimumValue = std::numeric_limits<int32_t>::lowest();
+          myRasterBandStats.maximumValue = std::numeric_limits<int32_t>::max();
+          break;
+        }
+        case Qgis::DataType::Float32:
+        case Qgis::DataType::CFloat32:
+        {
+          myRasterBandStats.minimumValue = std::numeric_limits<float_t>::lowest();
+          myRasterBandStats.maximumValue = std::numeric_limits<float_t>::max();
+          break;
+        }
+        case Qgis::DataType::Float64:
+        case Qgis::DataType::CFloat64:
+        {
+          myRasterBandStats.minimumValue = std::numeric_limits<double_t>::lowest();
+          myRasterBandStats.maximumValue = std::numeric_limits<double_t>::max();
+          break;
+        }
+        case Qgis::DataType::ARGB32:
+        case Qgis::DataType::ARGB32_Premultiplied:
+        case Qgis::DataType::UnknownDataType:
+        {
+          // Nothing to guess
+          break;
+        }
+      }
+    }
     min = myRasterBandStats.minimumValue;
     max = myRasterBandStats.maximumValue;
   }
@@ -1158,7 +1221,7 @@ void QgsRasterLayer::setContrastEnhancement( QgsContrastEnhancement::ContrastEnh
   if ( rasterRenderer == renderer() )
   {
     emit repaintRequested();
-    emit styleChanged();
+    emitStyleChanged();
     emit rendererChanged();
   }
 }
@@ -1267,7 +1330,7 @@ void QgsRasterLayer::refreshRenderer( QgsRasterRenderer *rasterRenderer, const Q
       }
 
       emit repaintRequested();
-      emit styleChanged();
+      emitStyleChanged();
       emit rendererChanged();
       return;
     }
@@ -1303,7 +1366,7 @@ void QgsRasterLayer::refreshRenderer( QgsRasterRenderer *rasterRenderer, const Q
         }
       }
 
-      emit styleChanged();
+      emitStyleChanged();
       emit rendererChanged();
     }
   }
@@ -1680,7 +1743,7 @@ void QgsRasterLayer::setRenderer( QgsRasterRenderer *renderer )
 
   mPipe.set( renderer );
   emit rendererChanged();
-  emit styleChanged();
+  emitStyleChanged();
 }
 
 void QgsRasterLayer::showStatusMessage( QString const &message )
@@ -1696,6 +1759,7 @@ void QgsRasterLayer::setTransformContext( const QgsCoordinateTransformContext &t
 {
   if ( mDataProvider )
     mDataProvider->setTransformContext( transformContext );
+  invalidateWgs84Extent();
 }
 
 QStringList QgsRasterLayer::subLayers() const
@@ -1969,6 +2033,22 @@ bool QgsRasterLayer::readXml( const QDomNode &layer_node, QgsReadWriteContext &c
     {
       flags |= QgsDataProvider::FlagTrustDataSource;
     }
+    // read extent
+    if ( mReadFlags & QgsMapLayer::FlagReadExtentFromXml )
+    {
+      const QDomNode extentNode = layer_node.namedItem( QStringLiteral( "extent" ) );
+      if ( !extentNode.isNull() )
+      {
+        // get the extent
+        const QgsRectangle mbr = QgsXmlUtils::readRectangle( extentNode.toElement() );
+
+        // store the extent
+        setExtent( mbr );
+
+        // skip get extent
+        flags |= QgsDataProvider::SkipGetExtent;
+      }
+    }
     setDataProvider( mProviderKey, providerOptions, flags );
   }
 
@@ -2110,6 +2190,9 @@ bool QgsRasterLayer::writeXml( QDomNode &layer_node,
                                QDomDocument &document,
                                const QgsReadWriteContext &context ) const
 {
+  if ( !mDataProvider )
+    return false;
+
   // first get the layer element so that we can append the type attribute
 
   QDomElement mapLayerNode = layer_node.toElement();
@@ -2120,7 +2203,7 @@ bool QgsRasterLayer::writeXml( QDomNode &layer_node,
     return false;
   }
 
-  mapLayerNode.setAttribute( QStringLiteral( "type" ), QStringLiteral( "raster" ) );
+  mapLayerNode.setAttribute( QStringLiteral( "type" ), QgsMapLayerFactory::typeToString( QgsMapLayerType::RasterLayer ) );
 
   // add provider node
 

@@ -82,7 +82,7 @@ void QgsMapToolCircle2TangentsPoint::cadCanvasReleaseEvent( QgsMapMouseEvent *e 
       if ( !isIntersect )
       {
         QgisApp::instance()->messageBar()->pushMessage( tr( "Error" ), tr( "Segments are parallels" ),
-            Qgis::Critical );
+            Qgis::MessageLevel::Critical );
         deactivate();
         activate();
       }
@@ -209,7 +209,7 @@ void QgsMapToolCircle2TangentsPoint::createRadiusSpinBox()
   mRadiusSpinBox->setValue( mRadius );
   QgisApp::instance()->addUserInputWidget( mRadiusSpinBox );
   mRadiusSpinBox->setFocus( Qt::TabFocusReason );
-  QObject::connect( mRadiusSpinBox, qgis::overload< double >::of( &QDoubleSpinBox::valueChanged ), this, &QgsMapToolCircle2TangentsPoint::radiusSpinBoxChanged );
+  QObject::connect( mRadiusSpinBox, qOverload< double >( &QDoubleSpinBox::valueChanged ), this, &QgsMapToolCircle2TangentsPoint::radiusSpinBoxChanged );
 }
 
 void QgsMapToolCircle2TangentsPoint::deleteRadiusSpinBox()
