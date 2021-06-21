@@ -1109,7 +1109,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
      * calculated by countSymbolFeatures()
      * \returns number of features rendered by symbol or -1 if failed or counts are not available
      */
-    long featureCount( const QString &legendKey ) const;
+    long long featureCount( const QString &legendKey ) const;
 
     /**
      * Ids of features rendered with specified legend key. Features must be first
@@ -1708,7 +1708,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
      * If you need only the count of committed features call this method on this layer's provider.
      * \returns the number of features on this layer or -1 if unknown.
      */
-    long featureCount() const FINAL;
+    long long featureCount() const FINAL;
 
     /**
      * Makes layer read-only (editing disabled) or not
@@ -2272,6 +2272,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
      * \param context expression context for expressions and filters
      * \param ok if specified, will be set to TRUE if aggregate calculation was successful
      * \param fids list of fids to filter, otherwise will use all fids
+     * \param feedback optional feedback argument for early cancellation (since QGIS 3.22)
      * \returns calculated aggregate value
      * \since QGIS 2.16
      */
@@ -2280,7 +2281,8 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
                         const QgsAggregateCalculator::AggregateParameters &parameters = QgsAggregateCalculator::AggregateParameters(),
                         QgsExpressionContext *context = nullptr,
                         bool *ok = nullptr,
-                        QgsFeatureIds *fids = nullptr ) const;
+                        QgsFeatureIds *fids = nullptr,
+                        QgsFeedback *feedback = nullptr ) const;
 
     //! Sets the blending mode used for rendering each feature
     void setFeatureBlendMode( QPainter::CompositionMode blendMode );
@@ -2977,7 +2979,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
     bool mSymbolFeatureCounted = false;
 
     // Feature counts for each renderer legend key
-    QHash<QString, long> mSymbolFeatureCountMap;
+    QHash<QString, long long> mSymbolFeatureCountMap;
     QHash<QString, QgsFeatureIds> mSymbolFeatureIdMap;
 
     //! True while an undo command is active

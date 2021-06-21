@@ -12,11 +12,13 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+#include "qgsmessagelog.h"
 #include "qgsvertextool.h"
 
 #include "qgsadvanceddigitizingdockwidget.h"
 #include "qgscurve.h"
+#include "qgslinestring.h"
+#include "qgscircularstring.h"
 #include "qgscurvepolygon.h"
 #include "qgsgeometryutils.h"
 #include "qgsgeometryvalidator.h"
@@ -1374,6 +1376,15 @@ void QgsVertexTool::keyPressEvent( QKeyEvent *e )
       }
       break;
     }
+    case Qt::Key_O:
+    {
+      if ( mDraggingVertex || ( !mDraggingEdge && !mSelectedVertices.isEmpty() ) )
+      {
+        e->ignore();  // Override default shortcut management
+        toggleVertexCurve();
+      }
+      break;
+    }
     case Qt::Key_R:
     {
       if ( e->modifiers() & Qt::ShiftModifier && !mDraggingVertex && !mDraggingEdge )
@@ -2499,6 +2510,7 @@ void QgsVertexTool::deleteVertex()
       std::sort( vertexIds.begin(), vertexIds.end(), std::greater<int>() );
       for ( int vertexId : vertexIds )
       {
+        QgsMessageLog::logMessage( "DELETE : fid:" + QString::number( fid ) + " ; vertexId:" + QString::number( vertexId ), "DEBUG" );
         if ( res != QgsVectorLayer::EmptyGeometry )
           res = layer->deleteVertex( fid, vertexId );
         if ( res != QgsVectorLayer::EmptyGeometry && res != QgsVectorLayer::Success )
@@ -2543,6 +2555,78 @@ void QgsVertexTool::deleteVertex()
       vertices_new << Vertex( vertex.layer, vertex.fid, vertexId );
       setHighlightedVertices( vertices_new );
     }
+  }
+
+  if ( mVertexEditor && mLockedFeature )
+    mVertexEditor->updateEditor( mLockedFeature.get() );
+}
+
+
+void QgsVertexTool::toggleVertexCurve()
+{
+
+  Vertex toConvert = Vertex( nullptr, -1, -1 );
+  if ( mSelectedVertices.size() == 1 )
+  {
+    toConvert = mSelectedVertices.first();
+  }
+  else if ( mDraggingVertexType == AddingVertex || mDraggingVertexType == MovingVertex )
+  {
+    toConvert = *mDraggingVertex;
+  }
+  else
+  {
+    // TODO support more than just 1 vertex
+    QgisApp::instance()->messageBar()->pushMessage(
+      tr( "Could not convert vertex" ),
+      tr( "Conversion can only be done on exactly one vertex." ),
+      Qgis::Info );
+    return;
+  }
+
+  if ( mDraggingVertex )
+  {
+    if ( mDraggingVertexType == AddingVertex || mDraggingVertexType == AddingEndpoint )
+    {
+      QgisApp::instance()->messageBar()->pushMessage(
+        tr( "Could not convert vertex" ),
+        tr( "Cannot convert vertex before it is added." ),
+        Qgis::Warning );
+      return;
+    }
+    stopDragging();
+  }
+
+  QgsVectorLayer *layer = toConvert.layer;
+
+  if ( ! QgsWkbTypes::isCurvedType( layer->wkbType() ) )
+  {
+    QgisApp::instance()->messageBar()->pushMessage(
+      tr( "Could not convert vertex" ),
+      tr( "Layer of type %1 does not support curved geometries." ).arg( QgsWkbTypes::displayString( layer->wkbType() ) ),
+      Qgis::Warning );
+    return;
+  }
+
+  layer->beginEditCommand( tr( "Toggled vertex to/from curve" ) );
+
+  QgsGeometry geom = layer->getFeature( toConvert.fid ).geometry();
+
+  bool success = geom.toggleCircularAtVertex( toConvert.vertexId );
+
+  if ( success )
+  {
+    layer->changeGeometry( toConvert.fid, geom );
+    layer->endEditCommand();
+    layer->triggerRepaint();
+  }
+  else
+  {
+    layer->destroyEditCommand();
+    QgisApp::instance()->messageBar()->pushMessage(
+      tr( "Could not convert vertex" ),
+      tr( "Start/end of vertices of features and arcs can not be converted." ),
+      Qgis::Warning );
   }
 
   if ( mVertexEditor && mLockedFeature )

@@ -17,7 +17,7 @@ set(CMAKE_LINK_DEPENDS_NO_SHARED ON)
 #############################################################
 # Project and version
 set(CPACK_PACKAGE_VERSION_MAJOR "3")
-set(CPACK_PACKAGE_VERSION_MINOR "19")
+set(CPACK_PACKAGE_VERSION_MINOR "21")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
 set(COMPLETE_VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH})
 set(RELEASE_NAME "Master")
@@ -94,25 +94,19 @@ endif(NOT MSVC)
 
 if (IOS)
     set (DEFAULT_FORCE_STATIC_LIBS TRUE)
-    set (DEFAULT_FORCE_STATIC_PROVIDERS TRUE)
 else()
     set (DEFAULT_FORCE_STATIC_LIBS FALSE)
-    set (DEFAULT_FORCE_STATIC_PROVIDERS FALSE)
 endif()
 
 set (FORCE_STATIC_LIBS ${DEFAULT_FORCE_STATIC_LIBS} CACHE BOOL "Determines whether libraries should be static only")
 mark_as_advanced(FORCE_STATIC_LIBS)
 if (FORCE_STATIC_LIBS)
   set (LIBRARY_TYPE STATIC)
-else()
-  set (LIBRARY_TYPE SHARED)
-endif()
-
-set (FORCE_STATIC_PROVIDERS ${DEFAULT_FORCE_STATIC_PROVIDERS} CACHE BOOL "Determines whether data providers should be static only")
-mark_as_advanced(FORCE_STATIC_PROVIDERS)
-if (FORCE_STATIC_PROVIDERS)
   # following variable is used in qgsconfig.h
   set (HAVE_STATIC_PROVIDERS TRUE)
+else()
+  set (LIBRARY_TYPE SHARED)
+  unset(HAVE_STATIC_PROVIDERS)
 endif()
 
 # in generated makefiles use relative paths so the project dir is moveable
@@ -217,7 +211,7 @@ if(WITH_CORE)
     # The qgis_desktop target is meant to build a minimal but complete running QGIS during development
     # This should help to reduce compile time while still having a "complete enough" QGIS for most of the development
     add_custom_target(qgis_desktop
-      DEPENDS qgis qgispython pycore pygui pyanalysis postgresprovider staged-plugins pyplugin-installer resources svg doc icons
+      DEPENDS qgis qgispython pycore pygui pyanalysis provider_postgres staged-plugins pyplugin-installer resources svg doc icons
     )
   endif()
 
@@ -270,14 +264,6 @@ if(WITH_CORE)
   if(WITH_EPT)
     set(HAVE_EPT TRUE)
   endif()
-
-  #BUILD WITH QtMobility by default on android only. Other platform can force it
-  if (ANDROID)
-      set (DEFAULT_WITH_QTMOBILITY TRUE)
-  else()
-      set (DEFAULT_WITH_QTMOBILITY FALSE)
-  endif()
-  set (WITH_QTMOBILITY ${DEFAULT_WITH_QTMOBILITY} CACHE BOOL "Determines if QtMobility related code should be build (for example internal GPS)")
 
   set (WITH_THREAD_LOCAL TRUE CACHE BOOL "Determines whether std::thread_local should be used")
   mark_as_advanced(WITH_THREAD_LOCAL)
@@ -506,10 +492,6 @@ if(WITH_CORE)
 
   if(WITH_QTWEBKIT)
     set(OPTIONAL_QTWEBKIT ${Qt5WebKitWidgets_LIBRARIES})
-  endif()
-
-  if (WITH_QTMOBILITY)
-    find_package(QtMobility 1.1.0)
   endif()
 
   # search for QScintilla2 (C++ lib)

@@ -832,7 +832,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set_source_files_properties(qgsspatialindex.cpp PROPERTIES COMPILE_FLAGS -Wno-overloaded-virtual)
 endif()
 
-if (QT_MOBILITY_LOCATION_FOUND OR ${QT_VERSION_BASE}Positioning_FOUND)
+if (${QT_VERSION_BASE}Positioning_FOUND)
   set(QGIS_CORE_SRCS ${QGIS_CORE_SRCS}
     gps/qgsqtlocationconnection.cpp
   )
@@ -1682,7 +1682,7 @@ if (NOT WITH_QTWEBKIT)
   )
 endif()
 
-if (QT_MOBILITY_LOCATION_FOUND OR ${QT_VERSION_BASE}Positioning_FOUND)
+if (${QT_VERSION_BASE}Positioning_FOUND)
   set(QGIS_CORE_HDRS ${QGIS_CORE_HDRS}
     gps/qgsqtlocationconnection.h
   )
@@ -1715,7 +1715,7 @@ endif()
 # install qgsconfig.h and plugin.h here so they can get into
 # the OS X framework target
 
-if (QT_MOBILITY_LOCATION_FOUND OR ${QT_VERSION_BASE}Positioning_FOUND)
+if (${QT_VERSION_BASE}Positioning_FOUND)
   set(QGIS_CORE_HDRS ${QGIS_CORE_HDRS}
     gps/qgsqtlocationconnection.h
     gps/qgsgpsconnectionregistry.h
@@ -1966,10 +1966,6 @@ if (APPLE AND NOT IOS)
   target_link_libraries(qgis_core qgis_native)
 endif()
 
-if (QT_MOBILITY_LOCATION_FOUND)
-  target_link_libraries(qgis_core ${QT_MOBILITY_LOCATION_LIBRARY})
-endif()
-
 if (ADD_CLAZY_CHECKS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_BASE_FLAGS} -Xclang -plugin-arg-clazy -Xclang ${CLAZY_BASE_CHECKS},non-pod-global-static")
 endif()
@@ -2018,15 +2014,15 @@ if (HAVE_PDAL)
   )
 endif()
 
-if (FORCE_STATIC_PROVIDERS)
+if (FORCE_STATIC_LIBS)
   include_directories(
     ${CMAKE_SOURCE_DIR}/src/providers/wms
     ${CMAKE_SOURCE_DIR}/src/providers/postgres
   )
 
   target_link_libraries(qgis_core
-    wmsprovider_a
-    postgresprovider_a
+    provider_wms_a
+    provider_postgres_a
   )
 endif()
 

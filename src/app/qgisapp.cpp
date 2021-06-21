@@ -457,6 +457,7 @@ Q_GUI_EXPORT extern int qt_defaultDpiX();
 #include "qgsmaptoolidentifyaction.h"
 #include "qgsmaptoolpinlabels.h"
 #include "qgsmaptoolmeasureangle.h"
+#include "qgsmaptoolmeasurebearing.h"
 #include "qgsmaptoolrotatepointsymbols.h"
 #include "qgsmaptooldigitizefeature.h"
 #include "qgsmaptooloffsetpointsymbol.h"
@@ -835,6 +836,8 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   sInstance = this;
   QgsRuntimeProfiler *profiler = QgsApplication::profiler();
 
+  QColor splashTextColor = Qgis::releaseName() == QStringLiteral( "Master" ) ? QColor( 93, 153, 51 ) : Qt::black;
+
   startProfile( tr( "Create user profile manager" ) );
   mUserProfileManager = new QgsUserProfileManager( QString(), this );
   mUserProfileManager->setRootLocation( rootProfileLocation );
@@ -863,7 +866,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   //////////
 
   startProfile( tr( "Checking user database" ) );
-  mSplash->showMessage( tr( "Checking database" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Checking database" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
   // Do this early on before anyone else opens it and prevents us copying it
   QString dbError;
@@ -878,10 +881,10 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   QgsApplication::createThemeFolder();
   endProfile();
 
-  mSplash->showMessage( tr( "Reading settings" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Reading settings" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
 
-  mSplash->showMessage( tr( "Setting up the GUI" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Setting up the GUI" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
 
   QgsApplication::initQgis();
@@ -1349,7 +1352,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   qApp->processEvents();
 
   // load providers
-  mSplash->showMessage( tr( "Checking provider plugins" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Checking provider plugins" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
 
   // Setup QgsNetworkAccessManager (this needs to happen after authentication, for proxy settings)
@@ -1376,7 +1379,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   mAppBadLayersHandler = new QgsHandleBadLayersHandler();
   QgsProject::instance()->setBadLayerHandler( mAppBadLayersHandler );
 
-  mSplash->showMessage( tr( "Starting Python" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Starting Python" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
   loadPythonSupport();
 
@@ -1393,7 +1396,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
 
   // Create the plugin registry and load plugins
   // load any plugins that were running in the last session
-  mSplash->showMessage( tr( "Restoring loaded plugins" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Restoring loaded plugins" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
   QgsPluginRegistry::instance()->setQgisInterface( mQgisInterface );
 
@@ -1463,7 +1466,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   QgsApplication::validityCheckRegistry()->addCheck( new QgsLayoutOverviewValidityCheck() );
   QgsApplication::validityCheckRegistry()->addCheck( new QgsLayoutPictureSourceValidityCheck() );
 
-  mSplash->showMessage( tr( "Initializing file filters" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Initializing file filters" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
 
   // now build vector and raster file filters
@@ -1488,7 +1491,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   // Please make sure this is the last thing the ctor does so that we can ensure the
   // widgets are all initialized before trying to restore their state.
   //
-  mSplash->showMessage( tr( "Restoring window state" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Restoring window state" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   qApp->processEvents();
   startProfile( tr( "Restore window state" ) );
   restoreWindowState();
@@ -1499,12 +1502,12 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, bool skipVersionCh
   QgsCustomization::instance()->updateMainWindow( mToolbarMenu );
   endProfile();
 
-  mSplash->showMessage( tr( "Populate saved styles" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "Populate saved styles" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
   startProfile( tr( "Populate saved styles" ) );
   QgsStyle::defaultStyle();
   endProfile();
 
-  mSplash->showMessage( tr( "QGIS Ready!" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->showMessage( tr( "QGIS Ready!" ), Qt::AlignHCenter | Qt::AlignBottom, splashTextColor );
 
   QgsMessageLog::logMessage( QgsApplication::showSettings(), QString(), Qgis::MessageLevel::Info );
 
@@ -2641,6 +2644,7 @@ void QgisApp::createActions()
   connect( mActionMeasure, &QAction::triggered, this, &QgisApp::measure );
   connect( mActionMeasureArea, &QAction::triggered, this, &QgisApp::measureArea );
   connect( mActionMeasureAngle, &QAction::triggered, this, &QgisApp::measureAngle );
+  connect( mActionMeasureBearing, &QAction::triggered, this,  [ = ] { setMapTool( mMapTools->mapTool( QgsAppMapTools::MeasureBearing ) ); } );
   connect( mActionZoomFullExtent, &QAction::triggered, this, &QgisApp::zoomFull );
   connect( mActionZoomToLayer, &QAction::triggered, this, &QgisApp::zoomToLayerExtent );
   connect( mActionZoomToLayers, &QAction::triggered, this, &QgisApp::zoomToLayerExtent );
@@ -2949,6 +2953,7 @@ void QgisApp::createActionGroups()
   mMapToolGroup->addAction( mActionMeasure );
   mMapToolGroup->addAction( mActionMeasureArea );
   mMapToolGroup->addAction( mActionMeasureAngle );
+  mMapToolGroup->addAction( mActionMeasureBearing );
   mMapToolGroup->addAction( mActionAddFeature );
   mMapToolGroup->addAction( mActionCircularStringCurvePoint );
   mMapToolGroup->addAction( mActionCircularStringRadius );
@@ -3394,6 +3399,7 @@ void QgisApp::createToolBars()
   bt->setPopupMode( QToolButton::MenuButtonPopup );
   bt->addAction( mActionMeasure );
   bt->addAction( mActionMeasureArea );
+  bt->addAction( mActionMeasureBearing );
   bt->addAction( mActionMeasureAngle );
 
   QAction *defMeasureAction = mActionMeasure;
@@ -3406,6 +3412,9 @@ void QgisApp::createToolBars()
       defMeasureAction = mActionMeasureArea;
       break;
     case 2:
+      defMeasureAction = mActionMeasureBearing;
+      break;
+    case 3:
       defMeasureAction = mActionMeasureAngle;
       break;
   }
@@ -4076,6 +4085,7 @@ void QgisApp::setTheme( const QString &themeName )
   mActionMeasure->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionMeasure.svg" ) ) );
   mActionMeasureArea->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionMeasureArea.svg" ) ) );
   mActionMeasureAngle->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionMeasureAngle.svg" ) ) );
+  mActionMeasureBearing->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionMeasureBearing.svg" ) ) );
   mActionMapTips->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionMapTips.svg" ) ) );
   mActionShowBookmarkManager->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionShowBookmarks.svg" ) ) );
   mActionShowBookmarks->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionShowBookmarks.svg" ) ) );
@@ -4295,6 +4305,7 @@ void QgisApp::setupCanvasTools()
   mMapTools->mapTool( QgsAppMapTools::MeasureDistance )->setAction( mActionMeasure );
   mMapTools->mapTool( QgsAppMapTools::MeasureArea )->setAction( mActionMeasureArea );
   mMapTools->mapTool( QgsAppMapTools::MeasureAngle )->setAction( mActionMeasureAngle );
+  mMapTools->mapTool( QgsAppMapTools::MeasureBearing )->setAction( mActionMeasureBearing );
   mMapTools->mapTool( QgsAppMapTools::TextAnnotation )->setAction( mActionTextAnnotation );
   mMapTools->mapTool( QgsAppMapTools::FormAnnotation )->setAction( mActionFormAnnotation );
   mMapTools->mapTool( QgsAppMapTools::HtmlAnnotation )->setAction( mActionHtmlAnnotation );
@@ -6816,6 +6827,7 @@ void QgisApp::showRasterCalculator()
                             QgsProject::instance()->transformContext() );
 
     QProgressDialog p( tr( "Calculating raster expression…" ), tr( "Abort" ), 0, 0 );
+    p.setWindowTitle( tr( "Raster calculator" ) );
     p.setWindowModality( Qt::WindowModal );
     p.setMaximum( 100.0 );
     QgsFeedback feedback;
@@ -7289,6 +7301,7 @@ bool QgisApp::fileSave()
     QMessageBox::critical( this,
                            tr( "Unable to save project %1" ).arg( QDir::toNativeSeparators( QgsProject::instance()->fileName() ) ),
                            QgsProject::instance()->error() );
+    mProjectLastModified = QgsProject::instance()->lastModified();
     return false;
   }
 
@@ -7351,7 +7364,6 @@ void QgisApp::fileSaveAs()
     mStatusBar->showMessage( tr( "Saved project to: %1" ).arg( QDir::toNativeSeparators( QgsProject::instance()->fileName() ) ), 5000 );
     // add this to the list of recently used project files
     saveRecentProjectPath();
-    mProjectLastModified = fullPath.lastModified();
   }
   else
   {
@@ -7361,6 +7373,7 @@ void QgisApp::fileSaveAs()
                            QMessageBox::Ok,
                            Qt::NoButton );
   }
+  mProjectLastModified = fullPath.lastModified();
 } // QgisApp::fileSaveAs
 
 void QgisApp::dxfExport()
@@ -12675,6 +12688,7 @@ void QgisApp::showOptionsDialog( QWidget *parent, const QString &currentPage, in
     mMapTools->mapTool< QgsMeasureTool >( QgsAppMapTools::MeasureDistance )->updateSettings();
     mMapTools->mapTool< QgsMeasureTool >( QgsAppMapTools::MeasureArea )->updateSettings();
     mMapTools->mapTool< QgsMapToolMeasureAngle >( QgsAppMapTools::MeasureAngle )->updateSettings();
+    mMapTools->mapTool< QgsMapToolMeasureBearing >( QgsAppMapTools::MeasureBearing )->updateSettings();
 
 #ifdef HAVE_3D
     const QList< Qgs3DMapCanvasDockWidget * > canvases3D = findChildren< Qgs3DMapCanvasDockWidget * >();
@@ -14596,6 +14610,7 @@ void QgisApp::projectProperties( const QString &currentPage )
   mMapTools->mapTool< QgsMeasureTool >( QgsAppMapTools::MeasureDistance )->updateSettings();
   mMapTools->mapTool< QgsMeasureTool >( QgsAppMapTools::MeasureArea )->updateSettings();
   mMapTools->mapTool< QgsMapToolMeasureAngle >( QgsAppMapTools::MeasureAngle )->updateSettings();
+  mMapTools->mapTool< QgsMapToolMeasureBearing >( QgsAppMapTools::MeasureBearing )->updateSettings();
 
   // Set the window title.
   setTitleBarText_( *this );
@@ -14773,10 +14788,10 @@ void QgisApp::activateDeactivateMultipleLayersRelatedActions()
   // these actions are enabled whenever ANY selected layer is spatial
   const bool hasSpatial = selectedLayersHaveSpatial();
   mActionZoomToLayers->setEnabled( hasSpatial );
-  mActionPanToSelected->setEnabled( hasSpatial );
 
   // this action is enabled whenever ANY selected layer has a selection
   const bool hasSelection = selectedLayersHaveSelection();
+  mActionPanToSelected->setEnabled( hasSelection );
   mActionZoomToSelected->setEnabled( hasSelection );
 }
 
@@ -14862,6 +14877,7 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
     mActionRegularPolygon2Points->setEnabled( false );
     mActionRegularPolygonCenterPoint->setEnabled( false );
     mActionRegularPolygonCenterCorner->setEnabled( false );
+    mMenuEditGeometry->setEnabled( false );
     mActionMoveFeature->setEnabled( false );
     mActionMoveFeatureCopy->setEnabled( false );
     mActionRotateFeature->setEnabled( false );
@@ -14894,6 +14910,7 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
     mActionSplitFeatures->setEnabled( false );
     mActionSplitParts->setEnabled( false );
     mActionMergeFeatures->setEnabled( false );
+    mMenuEditAttributes->setEnabled( false );
     mActionMergeFeatureAttributes->setEnabled( false );
     mActionMultiEditAttributes->setEnabled( false );
     mActionRotatePointSymbols->setEnabled( false );
@@ -14917,7 +14934,9 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
     mActionDecreaseContrast->setEnabled( false );
     mActionIncreaseGamma->setEnabled( false );
     mActionDecreaseGamma->setEnabled( false );
+    mActionPanToSelected->setEnabled( false );
     mActionZoomActualSize->setEnabled( false );
+    mActionZoomToSelected->setEnabled( false );
     mActionZoomToLayers->setEnabled( false );
     mActionZoomToLayer->setEnabled( false );
 
@@ -14930,6 +14949,8 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
 
   mActionLayerProperties->setEnabled( QgsProject::instance()->layerIsEmbedded( layer->id() ).isEmpty() );
   mActionAddToOverview->setEnabled( true );
+  mActionPanToSelected->setEnabled( true );
+  mActionZoomToSelected->setEnabled( true );
   mActionZoomToLayers->setEnabled( true );
   mActionZoomToLayer->setEnabled( true );
 
@@ -15010,6 +15031,7 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
         mUndoDock->widget()->setEnabled( canSupportEditing && isEditable );
         mActionUndo->setEnabled( canSupportEditing );
         mActionRedo->setEnabled( canSupportEditing );
+        mMenuEditGeometry->setEnabled( canSupportEditing && isEditable );
 
         //start editing/stop editing
         if ( canSupportEditing )
@@ -15057,12 +15079,14 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
         if ( isEditable && canChangeAttributes )
         {
           mActionMergeFeatures->setEnabled( layerHasSelection && canDeleteFeatures && canAddFeatures );
+          mMenuEditAttributes->setEnabled( layerHasSelection );
           mActionMergeFeatureAttributes->setEnabled( layerHasSelection );
           mActionMultiEditAttributes->setEnabled( layerHasSelection );
         }
         else
         {
           mActionMergeFeatures->setEnabled( false );
+          mMenuEditAttributes->setEnabled( false );
           mActionMergeFeatureAttributes->setEnabled( false );
           mActionMultiEditAttributes->setEnabled( false );
         }
@@ -15263,6 +15287,8 @@ void QgisApp::activateDeactivateLayerRelatedActions( QgsMapLayer *layer )
       mActionRegularPolygon2Points->setEnabled( false );
       mActionRegularPolygonCenterPoint->setEnabled( false );
       mActionRegularPolygonCenterCorner->setEnabled( false );
+      mMenuEditAttributes->setEnabled( false );
+      mMenuEditGeometry->setEnabled( false );
       mActionReverseLine->setEnabled( false );
       mActionTrimExtendFeature->setEnabled( false );
       mActionDeleteSelected->setEnabled( false );
@@ -16691,7 +16717,7 @@ void QgisApp::eraseAuthenticationDatabase()
     }
   }
 
-  // TODO: Check is Browser panel is also still loading?
+  // TODO: Check if Browser panel is also still loading?
   //       It has auto-connections in parallel (if tree item is expanded), though
   //       such connections with possible master password requests *should* be ignored
   //       when there is an authentication db erase scheduled.
