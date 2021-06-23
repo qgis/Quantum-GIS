@@ -22,6 +22,7 @@
 #include <QDir>
 #include <QSet>
 #include <QDirIterator>
+#include "qgsfeedback.h"
 
 #ifdef MSVC
 #include <Windows.h>
@@ -172,7 +173,7 @@ QString QgsFileUtils::findClosestExistingPath( const QString &path )
   return res == QLatin1String( "." ) ? QString() : res;
 }
 
-QStringList QgsFileUtils::findFile( const QString &file, const QString &basePath, int maxClimbs, int searchCeilling, const QString &currentDir )
+QStringList QgsFileUtils::findFile( const QString file, const QString basePath, int maxClimbs, int searchCeilling, const QString currentDir, QgsFeedback *feedback )
 {
   int depth = 0;
   QString originalFolder;
@@ -202,6 +203,11 @@ QStringList QgsFileUtils::findFile( const QString &file, const QString &basePath
   // find the nearest existing folder
   while ( !folder.exists() && folder.absolutePath().count( '/' ) > searchCeilling )
   {
+    if ( feedback )
+    {
+      if ( feedback->isCanceled() )
+        return foundFiles;
+    }
 
     existingBase = folder.path();
     if ( !folder.cdUp() )
@@ -222,6 +228,11 @@ QStringList QgsFileUtils::findFile( const QString &file, const QString &basePath
 
   while ( depth <= maxClimbs && folderExists && folder.absolutePath().count( '/' ) >= searchCeilling )
   {
+    if ( feedback )
+    {
+      if ( feedback->isCanceled() )
+        return foundFiles;
+    }
 
     QDirIterator localFinder( folder.path(), QStringList() << fileName, QDir::Files, QDirIterator::NoIteratorFlags );
     searchedFolder.append( folder.absolutePath() );
@@ -235,6 +246,12 @@ QStringList QgsFileUtils::findFile( const QString &file, const QString &basePath
     const QFileInfoList subdirs = folder.entryInfoList( QDir::AllDirs );
     for ( const QFileInfo &subdir : subdirs )
     {
+      if ( feedback )
+      {
+        if ( feedback->isCanceled() )
+          return foundFiles;
+      }
+
       if ( ! searchedFolder.contains( subdir.absolutePath() ) )
       {
         QDirIterator subDirFinder( subdir.path(), QStringList() << fileName, QDir::Files, QDirIterator::Subdirectories );
@@ -366,3 +383,27 @@ bool QgsFileUtils::pathIsSlowDevice( const QString &path )
   }
   return false;
 }
+
+
+QgsFileSearchTask::QgsFileSearchTask( const QString file, const QString basePath, int maxClimbs, int searchCeiling, const QString currentDir )
+  : QgsTask( tr( "searching for %1" ).arg( file ), QgsTask::CanCancel )
+  , mFile( file )
+  , mBasePath( basePath )
+  , mMaxClimbs( maxClimbs )
+  , mSearchCeil( searchCeiling )
+  , mCurrentDir( currentDir )
+  , mFeedback( new QgsFeedback() )
+{
+}
+
+bool QgsFileSearchTask::run()
+{
+  mResults = QgsFileUtils::findFile( mFile, mBasePath, mMaxClimbs, mSearchCeil, mCurrentDir, mFeedback.get() );
+  return !mResults.isEmpty();
+}
+
+QStringList QgsFileSearchTask::results()
+{
+  return mResults;
+}
+
