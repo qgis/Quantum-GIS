@@ -33,6 +33,7 @@
 #include "qgslegendrenderer.h"
 #include "qgsmaplayer.h"
 #include "qgsmaplayerlegend.h"
+#include "qgsmapthemecollection.h"
 #include "qgsmaptopixel.h"
 #include "qgsproject.h"
 #include "qgsrasteridentifyresult.h"
@@ -695,15 +696,30 @@ namespace QgsWms
         // If the map is set to follow preset we need to disable follow preset and manually
         // configure the layers here or the map item internal logic will override and get
         // the layers from the map theme.
+        QMap<QString, QString> layersStyle;
         if ( map->followVisibilityPreset() )
         {
+          QString presetName = map->followVisibilityPresetName();
           if ( layerSet.isEmpty() )
           {
             // Get the layers from the theme
             const QgsExpressionContext ex { map->createExpressionContext() };
             layerSet = map->layersToRender( &ex );
           }
+          // Unable the theme
           map->setFollowVisibilityPreset( false );
+
+          // Collect the style of each layer in the theme that has been unabled
+          QList<QgsMapThemeCollection::MapThemeLayerRecord> mapThemeRecords = QgsProject::instance()->mapThemeCollection()->mapThemeState( presetName ).layerRecords();
+          for ( auto layerMapThemeRecord : mapThemeRecords )
+          {
+            if ( layerSet.contains( layerMapThemeRecord.layer() ) )
+            {
+              QString styleName = layerMapThemeRecord.currentStyle;
+              layersStyle.insert( layerMapThemeRecord.layer()->id(),
+                                  layerMapThemeRecord.layer()->styleManager()->style( layerMapThemeRecord.currentStyle ).xmlData() );
+            }
+          }
         }
 
         // Handle highlight layers
@@ -715,6 +731,14 @@ namespace QgsWms
 
         map->setLayers( layerSet );
         map->setKeepLayerSet( true );
+
+        // Set style override if a particular style should be used due to a map theme.
+        // It will actualize linked legend symbols too.
+        if ( !layersStyle.isEmpty() )
+        {
+          map->setLayerStyleOverrides( layersStyle );
+          map->setKeepLayerStyles( true );
+        }
       }
 
       //grid space x / y
@@ -803,7 +827,18 @@ namespace QgsWms
         // get model and layer tree root of the legend
         QgsLegendModel *model = legend->model();
         QStringList layerSet;
-        const QList<QgsMapLayer *> layerList( map->layers() );
+        QList<QgsMapLayer *> mapLayers;
+        if ( map->layers().isEmpty() )
+        {
+          // in QGIS desktop, all layers has its legend, including invisible layers
+          // and using maptheme, legend items are automatically filtered
+          mapLayers = mProject->mapLayers( true ).values();
+        }
+        else
+        {
+          mapLayers = map->layers();
+        }
+        const QList<QgsMapLayer *> layerList = mapLayers;
         for ( const auto &layer : layerList )
           layerSet << layer->id();
 
