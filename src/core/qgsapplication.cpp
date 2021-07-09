@@ -41,6 +41,7 @@
 #include "qgscolorschemeregistry.h"
 #include "qgspainteffectregistry.h"
 #include "qgsprojectstorageregistry.h"
+#include "qgsexternalstorageregistry.h"
 #include "qgsrasterrendererregistry.h"
 #include "qgsrendererregistry.h"
 #include "qgspointcloudrendererregistry.h"
@@ -2418,7 +2419,12 @@ QgsScaleBarRendererRegistry *QgsApplication::scaleBarRendererRegistry()
 
 QgsProjectStorageRegistry *QgsApplication::projectStorageRegistry()
 {
-  return members()->mProjectStorageRegistry;
+  return members()->mProjectStorageRegistry.get();
+}
+
+QgsExternalStorageRegistry *QgsApplication::externalStorageRegistry()
+{
+  return members()->mExternalStorageRegistry;
 }
 
 QgsLocalizedDataPathRegistry *QgsApplication::localizedDataPathRegistry()
@@ -2560,7 +2566,12 @@ QgsApplication::ApplicationMembers::ApplicationMembers()
   }
   {
     profiler->start( tr( "Setup project storage registry" ) );
-    mProjectStorageRegistry = new QgsProjectStorageRegistry();
+    mProjectStorageRegistry.reset( new QgsProjectStorageRegistry() );
+    profiler->end();
+  }
+  {
+    profiler->start( tr( "Setup external storage registry" ) );
+    mExternalStorageRegistry = new QgsExternalStorageRegistry();
     profiler->end();
   }
   {
@@ -2612,7 +2623,6 @@ QgsApplication::ApplicationMembers::~ApplicationMembers()
   delete mPaintEffectRegistry;
   delete mPluginLayerRegistry;
   delete mProcessingRegistry;
-  delete mProjectStorageRegistry;
   delete mPageSizeRegistry;
   delete mAnnotationItemRegistry;
   delete mLayoutItemRegistry;

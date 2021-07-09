@@ -126,6 +126,10 @@ set(QGIS_CORE_SRCS
   effects/qgsshadoweffect.cpp
   effects/qgstransformeffect.cpp
 
+  externalstorage/qgsexternalstorage.cpp
+  externalstorage/qgsexternalstorageregistry.cpp
+  externalstorage/qgssimplecopyexternalstorage.cpp
+
   layertree/qgscolorramplegendnode.cpp
   layertree/qgscolorramplegendnodesettings.cpp
   layertree/qgslayertreegroup.cpp
@@ -319,6 +323,7 @@ set(QGIS_CORE_SRCS
   qgsconnectionregistry.cpp
   qgscoordinateformatter.cpp
   qgscoordinateutils.cpp
+  qgscopyfiletask.cpp
   qgscplhttpfetchoverrider.cpp
   qgscredentials.cpp
   qgsdartmeasurement.cpp
@@ -934,6 +939,7 @@ set(QGIS_CORE_HDRS
   qgsconnectionregistry.h
   qgscoordinateformatter.h
   qgscoordinateutils.h
+  qgscopyfiletask.h
   qgscredentials.h
   qgsdartmeasurement.h
   qgsdatabaseschemamodel.h
@@ -1199,6 +1205,9 @@ set(QGIS_CORE_HDRS
   editform/qgsattributeeditorrelation.h
   editform/qgsattributeeditorhtmlelement.h
   editform/qgsattributeeditorqmlelement.h
+
+  externalstorage/qgsexternalstorage.h
+  externalstorage/qgsexternalstorageregistry.h
 
   effects/qgsblureffect.h
   effects/qgscoloreffect.h
@@ -1731,6 +1740,9 @@ set(QGIS_CORE_PRIVATE_HDRS
   qgsspatialindexkdbush_p.h
 
   editform/qgseditformconfig_p.h
+
+  externalstorage/qgssimplecopyexternalstorage_p.h
+
   proj/qgscoordinatereferencesystem_p.h
   proj/qgscoordinatetransformcontext_p.h
   proj/qgscoordinatetransform_p.h
@@ -1918,6 +1930,7 @@ target_include_directories(qgis_core PUBLIC
   editform
   effects
   expression
+  externalstorage
   fieldformatter
   geometry
   geocms

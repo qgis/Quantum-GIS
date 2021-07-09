@@ -21,6 +21,7 @@
 #include <QStringList>
 #include <QColor>
 
+#include <memory>
 #include "qgis_sip.h"
 #include "qgsconfig.h"
 #include "qgssettingsentry.h"
@@ -36,6 +37,7 @@ class QgsFieldFormatterRegistry;
 class QgsColorSchemeRegistry;
 class QgsPaintEffectRegistry;
 class QgsProjectStorageRegistry;
+class QgsExternalStorageRegistry;
 class QgsLocalizedDataPathRegistry;
 class QgsRendererRegistry;
 class QgsSvgCache;
@@ -864,6 +866,12 @@ class CORE_EXPORT QgsApplication : public QApplication
     static QgsProjectStorageRegistry *projectStorageRegistry() SIP_KEEPREFERENCE;
 
     /**
+     * Returns registry of available external storage implementations.
+     * \since QGIS 3.20
+     */
+    static QgsExternalStorageRegistry *externalStorageRegistry() SIP_KEEPREFERENCE;
+
+    /**
      * Returns the registry of data repositories
      * These are used as paths for basemaps, logos, etc. which can be referenced
      * differently across work stations.
@@ -1045,7 +1053,8 @@ class CORE_EXPORT QgsApplication : public QApplication
       QgsClassificationMethodRegistry *mClassificationMethodRegistry = nullptr;
       QgsProcessingRegistry *mProcessingRegistry = nullptr;
       QgsConnectionRegistry *mConnectionRegistry = nullptr;
-      QgsProjectStorageRegistry *mProjectStorageRegistry = nullptr;
+      std::unique_ptr<QgsProjectStorageRegistry> mProjectStorageRegistry;
+      QgsExternalStorageRegistry *mExternalStorageRegistry = nullptr;
       QgsPageSizeRegistry *mPageSizeRegistry = nullptr;
       QgsRasterRendererRegistry *mRasterRendererRegistry = nullptr;
       QgsRendererRegistry *mRendererRegistry = nullptr;
