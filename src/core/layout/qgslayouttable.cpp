@@ -473,9 +473,10 @@ void QgsLayoutTable::render( QgsLayoutItemRenderContext &context, const QRectF &
       // disable text clipping to target text rectangle, because we manually clip to the full cell bounds below
       // and it's ok if text overlaps into the margin (e.g. extenders or italicized text)
       QStringList str = column.heading().split( '\n' );
-      if ( ( mWrapBehavior != TruncateText || column.width() > 0 ) && textRequiresWrapping( context.renderContext(), column.heading(), column.width(), headerFormat ) )
+      if ( mWrapBehavior != TruncateText && column.width() > 0 &&
+           QgsTextRenderer::requiresWrapping( column.heading(), column.width(), context.renderContext(), headerFormat ) )
       {
-        str = wrappedText( context.renderContext(), column.heading(), column.width(), headerFormat );
+        str = QgsTextRenderer::wrapText( column.heading(), column.width(), context.renderContext(), headerFormat, qgsDoubleNear( column.width(), 0.0 ) );
       }
 
       // scale to dots
@@ -535,9 +536,10 @@ void QgsLayoutTable::render( QgsLayoutItemRenderContext &context, const QRectF &
 
         // disable text clipping to target text rectangle, because we manually clip to the full cell bounds below
         // and it's ok if text overlaps into the margin (e.g. extenders or italicized text)
-        if ( ( mWrapBehavior != TruncateText || column.width() > 0 ) && textRequiresWrapping( context.renderContext(), localizedString, column.width(), cellFormat ) )
+        if ( mWrapBehavior != TruncateText && column.width() > 0 &&
+             QgsTextRenderer::requiresWrapping( localizedString, column.width(), context.renderContext(), cellFormat ) )
         {
-          str = wrappedText( context.renderContext(), localizedString, column.width(), cellFormat );
+          str = QgsTextRenderer::wrapText( localizedString, column.width(), context.renderContext(), cellFormat, qgsDoubleNear( column.width(), 0.0 ) );
         }
 
         p->save();
@@ -1129,9 +1131,14 @@ bool QgsLayoutTable::calculateMaxColumnWidths()
       if ( mColumns.at( col ).width() <= 0 )
       {
         //column width set to automatic, so check content size
-        const QStringList multiLineSplit = QgsExpressionUtils::toLocalizedString( *colIt ).split( '\n' );
 
         QgsTextFormat cellFormat = textFormatForCell( row - 1, col );
+        QStringList multiLineSplit = QgsExpressionUtils::toLocalizedString( *colIt ).split( '\n' );
+        if ( mWrapBehavior == WrapText )
+          multiLineSplit = QgsTextRenderer::wrapText( ( *colIt ).toString(), mColumns.at( col ).width(), context, cellFormat, qgsDoubleNear( mColumns.at( col ).width(), 0.0 ) );
+        else
+          multiLineSplit = ( *colIt ).toString().split( '\n' );
+
         QgsExpressionContextScopePopper popper( context.expressionContext(), scopeForCell( row - 1, col ) );
         cellFormat.updateDataDefinedProperties( context );
 
@@ -1189,10 +1196,10 @@ bool QgsLayoutTable::calculateMaxRowHeights()
     {
       heights[i] = 0;
     }
-    else if ( textRequiresWrapping( context, col.heading(), mColumns.at( i ).width(), cellFormat ) )
+    else if ( mWrapBehavior != TruncateText && mColumns.at( i ).width() > 0 && QgsTextRenderer::requiresWrapping( col.heading(), mColumns.at( i ).width(), context, cellFormat ) )
     {
       //contents too wide for cell, need to wrap
-      heights[i] = QgsTextRenderer::textHeight( context, cellFormat, wrappedText( context, col.heading(), mColumns.at( i ).width(), cellFormat ), QgsTextRenderer::Rect )
+      heights[i] = QgsTextRenderer::textHeight( context, cellFormat, QgsTextRenderer::wrapText( col.heading(), mColumns.at( i ).width(), context, cellFormat, qgsDoubleNear( mColumns.at( i ).width(), 0.0 ) ), QgsTextRenderer::Rect )
                    / context.convertToPainterUnits( 1, QgsUnitTypes::RenderMillimeters )
                    - headerDescentMm;
     }
@@ -1219,10 +1226,10 @@ bool QgsLayoutTable::calculateMaxRowHeights()
       const double contentDescentMm = QgsTextRenderer::fontMetrics( context, cellFormat, QgsTextRenderer::FONT_WORKAROUND_SCALE ).descent() / QgsTextRenderer::FONT_WORKAROUND_SCALE  / context.convertToPainterUnits( 1, QgsUnitTypes::RenderMillimeters );
       const QString localizedString { QgsExpressionUtils::toLocalizedString( *colIt ) };
 
-      if ( textRequiresWrapping( context, localizedString, mColumns.at( i ).width(), cellFormat ) )
+      if ( mWrapBehavior != TruncateText && mColumns.at( i ).width() > 0 && QgsTextRenderer::requiresWrapping( localizedString, mColumns.at( i ).width(), context, cellFormat ) )
       {
         //contents too wide for cell, need to wrap
-        heights[ row * cols + i ] = QgsTextRenderer::textHeight( context, cellFormat, wrappedText( context, localizedString, mColumns.at( i ).width(), cellFormat ), QgsTextRenderer::Rect ) / context.convertToPainterUnits( 1, QgsUnitTypes::RenderMillimeters ) - contentDescentMm;
+        heights[ row * cols + i ] = QgsTextRenderer::textHeight( context, cellFormat, QgsTextRenderer::wrapText( localizedString, mColumns.at( i ).width(), context, cellFormat, qgsDoubleNear( mColumns.at( i ).width(), 0.0 ) ), QgsTextRenderer::Rect ) / context.convertToPainterUnits( 1, QgsUnitTypes::RenderMillimeters ) - contentDescentMm;
       }
       else
       {
@@ -1373,83 +1380,6 @@ void QgsLayoutTable::drawHorizontalGridLines( QgsLayoutItemRenderContext &contex
     currentY += ( rowHeight + 2 * mCellMargin );
   }
   painter->drawLine( QPointF( halfGridStrokeWidth, currentY ), QPointF( mTableSize.width() - halfGridStrokeWidth, currentY ) );
-}
-
-bool QgsLayoutTable::textRequiresWrapping( QgsRenderContext &context, const QString &text, double columnWidth, const QgsTextFormat &format ) const
-{
-  if ( qgsDoubleNear( columnWidth, 0.0 ) || mWrapBehavior != WrapText )
-    return false;
-
-  const QStringList multiLineSplit = text.split( '\n' );
-  const double currentTextWidth = QgsTextRenderer::textWidth( context, format, multiLineSplit ) / context.convertToPainterUnits( 1, QgsUnitTypes::RenderMillimeters );
-  return currentTextWidth > columnWidth;
-}
-
-QStringList QgsLayoutTable::wrappedText( QgsRenderContext &context, const QString &value, double columnWidth, const QgsTextFormat &format ) const
-{
-  QStringList lines = value.split( '\n' );
-  QStringList outLines;
-  const auto constLines = lines;
-  for ( const QString &line : constLines )
-  {
-    if ( textRequiresWrapping( context, line, columnWidth, format ) )
-    {
-      //first step is to identify words which must be on their own line (too long to fit)
-      QStringList words = line.split( ' ' );
-      QStringList linesToProcess;
-      QString wordsInCurrentLine;
-      const auto constWords = words;
-      for ( const QString &word : constWords )
-      {
-        if ( textRequiresWrapping( context, word, columnWidth, format ) )
-        {
-          //too long to fit
-          if ( !wordsInCurrentLine.isEmpty() )
-            linesToProcess << wordsInCurrentLine;
-          wordsInCurrentLine.clear();
-          linesToProcess << word;
-        }
-        else
-        {
-          if ( !wordsInCurrentLine.isEmpty() )
-            wordsInCurrentLine.append( ' ' );
-          wordsInCurrentLine.append( word );
-        }
-      }
-      if ( !wordsInCurrentLine.isEmpty() )
-        linesToProcess << wordsInCurrentLine;
-
-      const auto constLinesToProcess = linesToProcess;
-      for ( const QString &line : constLinesToProcess )
-      {
-        QString remainingText = line;
-        int lastPos = remainingText.lastIndexOf( ' ' );
-        while ( lastPos > -1 )
-        {
-          //check if remaining text is short enough to go in one line
-          if ( !textRequiresWrapping( context, remainingText, columnWidth, format ) )
-          {
-            break;
-          }
-
-          if ( !textRequiresWrapping( context, remainingText.left( lastPos ), columnWidth, format ) )
-          {
-            outLines << remainingText.left( lastPos );
-            remainingText = remainingText.mid( lastPos + 1 );
-            lastPos = 0;
-          }
-          lastPos = remainingText.lastIndexOf( ' ', lastPos - 1 );
-        }
-        outLines << remainingText;
-      }
-    }
-    else
-    {
-      outLines << line;
-    }
-  }
-
-  return outLines;
 }
 
 QColor QgsLayoutTable::backgroundColor( int row, int column ) const
