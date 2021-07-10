@@ -39,7 +39,7 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
     /**
      * Constructor
      */
-    QgsLayerTreeGroup( const QString &name = QString(), bool checked = true );
+    QgsLayerTreeGroup( const QString &name = QString(), bool checked = true, const QString &id = QString() );
 
 #ifndef SIP_RUN
     QgsLayerTreeGroup( const QgsLayerTreeGroup &other );
@@ -54,6 +54,11 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
      * Sets the group's name.
      */
     void setName( const QString &n ) override;
+
+    /**
+     * Returns the group's id.
+     */
+    QString id() const;
 
     /**
      * Insert a new group node with given name at specified position. The newly created node is owned by this group.
@@ -216,7 +221,14 @@ class CORE_EXPORT QgsLayerTreeGroup : public QgsLayerTreeNode
      */
     void updateChildVisibilityMutuallyExclusive();
 
+    /**
+     * Generate the group's id, according to the groups's name (based on QgsMapLayer::generateId)
+     */
+    QString generateId( QString name ) const;
+
     QString mName;
+
+    QString mId;
 
     bool mChangingChildVisibility = false;
 
