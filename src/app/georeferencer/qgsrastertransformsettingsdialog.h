@@ -1,5 +1,5 @@
 /***************************************************************************
-     qgstransformsettingsdialog.h
+     qgsrastertransformsettingsdialog.h
      --------------------------------------
     Date                 : 14-Feb-2010
     Copyright            : (C) 2010 by Jack R, Maxim Dubinin (GIS-Lab)
@@ -13,21 +13,21 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSTRANSFORMSETTINGSDIALOG_H
-#define QGSTRANSFORMSETTINGSDIALOG_H
+#ifndef QGSRASTERTRANSFORMSETTINGSDIALOG_H
+#define QGSRASTERTRANSFORMSETTINGSDIALOG_H
 
 #include <QDialog>
 
 #include "qgsgeorefmainwindow.h"
 
-#include "ui_qgstransformsettingsdialogbase.h"
+#include "ui_qgsrastertransformsettingsdialogbase.h"
 
-class QgsTransformSettingsDialog : public QDialog, private Ui::QgsTransformSettingsDialog
+class QgsRasterTransformSettingsDialog : public QDialog, private Ui::QgsRasterTransformSettingsDialog
 {
     Q_OBJECT
 
   public:
-    QgsTransformSettingsDialog( const QString &raster, const QString &output,
+    QgsRasterTransformSettingsDialog( const QString &raster, const QString &output,
                                 int countGCPpoints, QWidget *parent = nullptr );
 
     void getTransformSettings( QgsGeorefTransform::TransformMethod &tp,
@@ -57,4 +57,4 @@ class QgsTransformSettingsDialog : public QDialog, private Ui::QgsTransformSetti
     QStringList mListCompression;
 };
 
-#endif // QGSTRANSFORMSETTINGSDIALOG_H
+#endif // QGSRASTERTRANSFORMSETTINGSDIALOG_H
