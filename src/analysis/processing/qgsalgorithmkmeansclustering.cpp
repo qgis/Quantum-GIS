@@ -108,7 +108,7 @@ QVariantMap QgsKMeansClusteringAlgorithm::processAlgorithm( const QVariantMap &p
 
   std::vector< Feature > clusterFeatures;
   QgsFeatureIterator features = source->getFeatures( QgsFeatureRequest().setNoAttributes() );
-  QHash< QgsFeatureId, int > idToObj;
+  QHash< QgsFeatureId, size_t > idToObj;
   while ( features.nextFeature( feat ) )
   {
     i++;
@@ -159,7 +159,7 @@ QVariantMap QgsKMeansClusteringAlgorithm::processAlgorithm( const QVariantMap &p
 
   // cluster size
   std::unordered_map< int, int> clusterSize;
-  for ( int obj : idToObj )
+  for ( size_t obj : idToObj )
     clusterSize[ clusterFeatures[ obj ].cluster ]++;
 
   features = source->getFeatures();
@@ -364,14 +364,14 @@ void QgsKMeansClusteringAlgorithm::findNearest( std::vector<QgsKMeansClusteringA
 
 void QgsKMeansClusteringAlgorithm::updateMeans( const std::vector<Feature> &points, std::vector<QgsPointXY> &centers, std::vector<uint> &weights, const int k )
 {
-  uint n = points.size();
+  size_t n = points.size();
   std::fill( weights.begin(), weights.end(), 0 );
   for ( int i = 0; i < k; i++ )
   {
     centers[i].setX( 0.0 );
     centers[i].setY( 0.0 );
   }
-  for ( uint i = 0; i < n; i++ )
+  for ( size_t i = 0; i < n; i++ )
   {
     int cluster = points[i].cluster;
     centers[cluster] += QgsVector( points[i].point.x(),
