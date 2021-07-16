@@ -54,3 +54,4 @@ endforeach(TESTSRC)
 
 add_subdirectory(maptooladdfeaturepoint)
 add_subdirectory(maptooladdfeatureline)
+add_subdirectory(maptoolcircle)

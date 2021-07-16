@@ -1,9 +1,9 @@
 /***************************************************************************
      testqgsmaptoolcircle.cpp
      ------------------------
-    Date                 : January 2018
-    Copyright            : (C) 2018 by Paul Blottiere
-    Email                : paul.blottiere@oslandia.com
+    Date                 : April 2021
+    Copyright            : (C) 2021 by Loïc Bartoletti
+    Email                : loic dot bartoletti @oslandia dot com
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -68,7 +68,7 @@ void TestQgsMapToolCircle::initTestCase()
   mCanvas->setDestinationCrs( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:27700" ) ) );
 
   // make testing layers
-  mLayer = new QgsVectorLayer( QStringLiteral( "LineStringZ?crs=EPSG:27700" ), QStringLiteral( "layer line Z" ), QStringLiteral( "memory" ) );
+  mLayer = new QgsVectorLayer( QStringLiteral( "LineString?crs=EPSG:27700" ), QStringLiteral( "layer line " ), QStringLiteral( "memory" ) );
   QVERIFY( mLayer->isValid() );
   QgsProject::instance()->addMapLayers( QList<QgsMapLayer *>() << mLayer );
 
@@ -86,7 +86,6 @@ void TestQgsMapToolCircle::cleanupTestCase()
 
 void TestQgsMapToolCircle::testCircleFrom2Points()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 333 );
   mLayer->startEditing();
 
   QgsMapToolCircle2Points mapTool( mParentTool, mCanvas );
@@ -101,16 +100,14 @@ void TestQgsMapToolCircle::testCircleFrom2Points()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 333, 1 1 333, 0 0 333, -1 1 333, 0 2 333))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 1 1, 0 0, -1 1, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 void TestQgsMapToolCircle::testCircleFrom2PointsWithDeletedVertex()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 333 );
   mLayer->startEditing();
 
   QgsMapToolCircle2Points mapTool( mParentTool, mCanvas );
@@ -128,16 +125,14 @@ void TestQgsMapToolCircle::testCircleFrom2PointsWithDeletedVertex()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 333, 1 1 333, 0 0 333, -1 1 333, 0 2 333))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 1 1, 0 0, -1 1, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 void TestQgsMapToolCircle::testCircleFrom3Points()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 111 );
   mLayer->startEditing();
 
   QgsMapToolCircle3Points mapTool( mParentTool, mCanvas );
@@ -153,16 +148,14 @@ void TestQgsMapToolCircle::testCircleFrom3Points()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 111, 1 1 111, 0 0 111, -1 1 111, 0 2 111))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 1 1, 0 0, -1 1, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 void TestQgsMapToolCircle::testCircleFrom3PointsWithDeletedVertex()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 111 );
   mLayer->startEditing();
 
   QgsMapToolCircle3Points mapTool( mParentTool, mCanvas );
@@ -180,16 +173,14 @@ void TestQgsMapToolCircle::testCircleFrom3PointsWithDeletedVertex()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 111, 1 1 111, 0 0 111, -1 1 111, 0 2 111))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 1 1, 0 0, -1 1, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 void TestQgsMapToolCircle::testCircleFromCenterPoint()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 222 );
   mLayer->startEditing();
 
   QgsMapToolCircleCenterPoint mapTool( mParentTool, mCanvas );
@@ -204,16 +195,14 @@ void TestQgsMapToolCircle::testCircleFromCenterPoint()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 222, 2 0 222, 0 -2 222, -2 0 222, 0 2 222))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 2 0, 0 -2, -2 0, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 void TestQgsMapToolCircle::testCircleFromCenterPointWithDeletedVertex()
 {
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 222 );
   mLayer->startEditing();
 
   QgsMapToolCircleCenterPoint mapTool( mParentTool, mCanvas );
@@ -231,11 +220,10 @@ void TestQgsMapToolCircle::testCircleFromCenterPointWithDeletedVertex()
   QCOMPARE( mLayer->featureCount(), ( long )1 );
   QgsFeature f = mLayer->getFeature( newFid );
 
-  QString wkt = "CompoundCurveZ (CircularStringZ (0 2 222, 2 0 222, 0 -2 222, -2 0 222, 0 2 222))";
+  QString wkt = "CompoundCurve (CircularString (0 2, 2 0, 0 -2, -2 0, 0 2))";
   QCOMPARE( f.geometry().asWkt(), wkt );
 
   mLayer->rollBack();
-  QgsSettingsRegistryCore::settingsDigitizingDefaultZValue.setValue( 0 );
 }
 
 QGSTEST_MAIN( TestQgsMapToolCircle )
