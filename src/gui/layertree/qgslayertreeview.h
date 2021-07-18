@@ -32,7 +32,6 @@ class QgsMapLayer;
 class QgsMessageBar;
 class QgsLayerTreeFilterProxyModel;
 
-
 #include <QSortFilterProxyModel>
 
 /**
@@ -60,6 +59,12 @@ class GUI_EXPORT QgsLayerTreeProxyModel : public QSortFilterProxyModel
     void setFilterText( const QString &filterText = QString() );
 
     /**
+     * Sets a predefined list of layer Ids to process.
+     * \since QGIS 3.20
+     */
+    void setApprovedIds( const QStringList &ids );
+
+    /**
      * Returns if private layers are shown.
      */
     bool showPrivateLayers() const;
@@ -68,6 +73,13 @@ class GUI_EXPORT QgsLayerTreeProxyModel : public QSortFilterProxyModel
      * Determines if private layers are shown.
      */
     void setShowPrivateLayers( bool showPrivate );
+
+    /**
+     * Allow non-layers to be shown or hidden.
+     * \param show If TRUE (default behavior), non-layers will be displayed, otherwise they will not.
+     * \since QGIS 3.20
+     */
+    void setShowNonLayers( bool show );
 
   protected:
 
@@ -79,7 +91,10 @@ class GUI_EXPORT QgsLayerTreeProxyModel : public QSortFilterProxyModel
 
     QgsLayerTreeModel *mLayerTreeModel = nullptr;
     QString mFilterText;
+    QStringList mDesiredIds;
     bool mShowPrivateLayers = false;
+    bool mShowNonLayers = true;
+
 
 };
 
@@ -120,8 +135,12 @@ class GUI_EXPORT QgsLayerTreeView : public QTreeView
     explicit QgsLayerTreeView( QWidget *parent SIP_TRANSFERTHIS = nullptr );
     ~QgsLayerTreeView() override;
 
-    //! Overridden setModel() from base class. Only QgsLayerTreeModel is an acceptable model.
-    void setModel( QAbstractItemModel *model ) override;
+    /**
+     * Overridden setModel() from base class.
+     * \param model Model used to populate the view. Only QgsLayerTreeModel models are accepted.
+     * \param connectProxy If TRUE, will connect change to the model to this, disabling may prevent updating and crashes.
+     */
+    void setModel( QAbstractItemModel *model, bool connectProxy = true );
 
     //! Gets access to the model casted to QgsLayerTreeModel
     QgsLayerTreeModel *layerTreeModel() const;
@@ -290,6 +309,13 @@ class GUI_EXPORT QgsLayerTreeView : public QTreeView
      * \since QGIS 3.8
      */
     int layerMarkWidth() const { return mLayerMarkWidth; }
+
+    /**
+     * Allow non-layers to be shown or hidden.
+     * \param show If TRUE (default behavior), non-layers will be displayed, otherwise they will not.
+     * \since QGIS 3.20
+     */
+    void showNonLayers( bool show );
 
 ///@cond PRIVATE
 

@@ -10,7 +10,6 @@
 
 
 
-
 class QgsLayerTreeProxyModel : QSortFilterProxyModel
 {
 %Docstring(signature="appended")
@@ -36,6 +35,13 @@ Constructs QgsLayerTreeProxyModel with source model ``treeModel`` and a ``parent
 Sets filter to ``filterText``.
 %End
 
+    void setApprovedIds( const QStringList &ids );
+%Docstring
+Sets a predefined list of layer Ids to process.
+
+.. versionadded:: 3.20
+%End
+
     bool showPrivateLayers() const;
 %Docstring
 Returns if private layers are shown.
@@ -44,6 +50,15 @@ Returns if private layers are shown.
     void setShowPrivateLayers( bool showPrivate );
 %Docstring
 Determines if private layers are shown.
+%End
+
+    void setShowNonLayers( bool show );
+%Docstring
+Allow non-layers to be shown or hidden.
+
+:param show: If ``True`` (default behavior), non-layers will be displayed, otherwise they will not.
+
+.. versionadded:: 3.20
 %End
 
   protected:
@@ -90,10 +105,12 @@ Constructor for QgsLayerTreeView
 %End
     ~QgsLayerTreeView();
 
-    virtual void setModel( QAbstractItemModel *model );
-
+    void setModel( QAbstractItemModel *model, bool connectProxy = true );
 %Docstring
-Overridden :py:func:`~QgsLayerTreeView.setModel` from base class. Only :py:class:`QgsLayerTreeModel` is an acceptable model.
+Overridden :py:func:`~QgsLayerTreeView.setModel` from base class.
+
+:param model: Model used to populate the view. Only :py:class:`QgsLayerTreeModel` models are accepted.
+:param connectProxy: If ``True``, will connect change to the model to this, disabling may prevent updating and crashes.
 %End
 
     QgsLayerTreeModel *layerTreeModel() const;
@@ -293,6 +310,15 @@ Returns width of contextual menu mark, at right of layer node items.
 .. seealso:: :py:func:`setLayerMarkWidth`
 
 .. versionadded:: 3.8
+%End
+
+    void showNonLayers( bool show );
+%Docstring
+Allow non-layers to be shown or hidden.
+
+:param show: If ``True`` (default behavior), non-layers will be displayed, otherwise they will not.
+
+.. versionadded:: 3.20
 %End
 
 
