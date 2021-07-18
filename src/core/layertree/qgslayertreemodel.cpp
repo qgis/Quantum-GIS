@@ -1255,6 +1255,11 @@ QList<QgsLayerTreeModelLegendNode *> QgsLayerTreeModel::filterLegendNodes( const
                 if ( mLegendFilterHitTest->legendKeyVisible( ruleKey, vl ) )
                   filtered << node;
               }
+              else if ( QgsRasterLayer *rl = qobject_cast<QgsRasterLayer *>( node->layerNode()->layer() ) )
+              {
+                if ( mLegendFilterHitTest->rasterVisible( rl ) )
+                  filtered << node;
+              }
               else
               {
                 filtered << node;
