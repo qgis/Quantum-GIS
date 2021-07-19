@@ -30,6 +30,10 @@
 #include <QByteArray>
 #include <QVariant>
 
+#include <QUrl>
+#include <QUrlQuery>
+#include <QSet>
+
 #define ERR(message) QgsError(message, "Raster provider")
 
 void QgsRasterDataProvider::setUseSourceNoDataValue( int bandNo, bool use )
@@ -646,4 +650,160 @@ void QgsRasterDataProvider::writeXml( QDomDocument &doc, QDomElement &parentElem
 QString QgsRasterDataProvider::colorInterpretationName( int bandNo ) const
 {
   return colorName( colorInterpretation( bandNo ) );
+}
+
+QgsRasterDataProvider::DecodedUriParameters QgsRasterDataProvider::decodeVirtualRasterProviderUri( const QString &uri, bool *ok )
+{
+  QUrl url = QUrl::fromEncoded( uri.toLatin1() );
+  const QUrlQuery query( url.query() );
+  DecodedUriParameters components;
+
+  if ( ! query.hasQueryItem( QStringLiteral( "crs" ) ) )
+  {
+    QgsDebugMsg( "crs is missing" );
+    *ok = false;
+    return components;
+  }
+  components.crs.createFromString( query.queryItemValue( QStringLiteral( "crs" ) ) );
+
+  if ( ! query.hasQueryItem( QStringLiteral( "extent" ) ) )
+  {
+    QgsDebugMsg( "extent is missing" );
+    *ok = false;
+    return components;
+  }
+  QStringList pointValuesList = query.queryItemValue( QStringLiteral( "extent" ) ).split( ',' );
+  components.extent = QgsRectangle( pointValuesList.at( 0 ).toDouble(), pointValuesList.at( 1 ).toDouble(),
+                                    pointValuesList.at( 2 ).toDouble(), pointValuesList.at( 3 ).toDouble() );
+
+  if ( ! query.hasQueryItem( QStringLiteral( "width" ) ) )
+  {
+    QgsDebugMsg( "width is missing" );
+    *ok = false;
+    return components;
+  }
+  bool flagW;
+  components.width = query.queryItemValue( QStringLiteral( "width" ) ).toInt( & flagW );
+  if ( !flagW ||  components.width < 0 || components.width > std::numeric_limits<int>::max() )
+  {
+    QgsDebugMsg( "invalid or negative width input" );
+    *ok = false;
+    return components;
+  }
+
+  if ( ! query.hasQueryItem( QStringLiteral( "height" ) ) )
+  {
+    QgsDebugMsg( "height is missing" );
+    *ok = false;
+    return components;
+  }
+  bool flagH;
+  components.height = query.queryItemValue( QStringLiteral( "height" ) ).toInt( & flagH );
+  if ( !flagH ||  components.height < 0 || components.height > std::numeric_limits<int>::max() )
+  {
+    QgsDebugMsg( "invalid or negative width input" );
+    *ok = false;
+    return components;
+  }
+
+  if ( ! query.hasQueryItem( QStringLiteral( "formula" ) ) )
+  {
+    QgsDebugMsg( "formula is missing" );
+    *ok = false;
+    return components;
+  }
+  components.formula = query.queryItemValue( QStringLiteral( "formula" ) );
+
+  QSet<QString> rLayerName;
+  for ( const auto &item : query.queryItems() )
+  {
+    if ( item.first.indexOf( ':' ) == -1 )
+    {
+      continue;
+    }
+    else
+    {
+      rLayerName.insert( item.first.mid( 0, item.first.indexOf( ':' ) ) );
+    }
+  }
+
+  if ( rLayerName.isEmpty() )
+  {
+    return components;
+  }
+  QSet<QString>::iterator i;
+  for ( i = rLayerName.begin(); i != rLayerName.end(); ++i )
+  {
+    InputLayers rLayer;
+
+    rLayer.name = ( *i );
+    rLayer.uri = query.queryItemValue( ( *i ) % QStringLiteral( ":uri" ) );
+    rLayer.provider = query.queryItemValue( ( *i ) % QStringLiteral( ":provider" ) );
+    components.rInputLayers.append( rLayer ) ;
+
+    if ( rLayer.uri.isNull() || rLayer.provider.isNull() )
+    {
+      QgsDebugMsg( "One or more raster information are missing" );
+      *ok = false;
+      return components;
+    }
+  }
+
+  return components;
+}
+
+QString QgsRasterDataProvider::encodeVirtualRasterProviderUri( const DecodedUriParameters &parts )
+{
+  QUrl uri;
+  QUrlQuery query;
+
+  if ( parts.crs.isValid() )
+  {
+    query.addQueryItem( QStringLiteral( "crs" ), parts.crs.authid() );
+  }
+
+  if ( ! parts.extent.isNull() )
+  {
+    QString rect = QString( "%1,%2,%3,%4" ).arg( qgsDoubleToString( parts.extent.xMinimum() ), qgsDoubleToString( parts.extent.yMinimum() ),
+                   qgsDoubleToString( parts.extent.xMaximum() ), qgsDoubleToString( parts.extent.yMaximum() ) );
+
+    query.addQueryItem( QStringLiteral( "extent" ), rect );
+  }
+
+  if ( parts.width )
+  {
+    query.addQueryItem( QStringLiteral( "width" ), QString::number( parts.width ) );
+  }
+
+  if ( parts.height )
+  {
+    query.addQueryItem( QStringLiteral( "height" ), QString::number( parts.height ) );
+  }
+
+  if ( ! parts.formula.isNull() )
+  {
+    query.addQueryItem( QStringLiteral( "formula" ), parts.formula );
+  }
+
+
+  if ( ! parts.rInputLayers.isEmpty() )
+  {
+    /*
+    for (int i = 0; i < parts.rInputLayers.size() ; ++i )
+    {
+        query.addQueryItem( parts.rInputLayers.at(i).name % QStringLiteral(":uri") , parts.rInputLayers.at(i).uri );
+        query.addQueryItem( parts.rInputLayers.at(i).name % QStringLiteral(":provider") , parts.rInputLayers.at(i).provider );
+    }
+    */
+
+    for ( const auto &it : parts.rInputLayers )
+    {
+      query.addQueryItem( it.name % QStringLiteral( ":uri" ), it.uri );
+      query.addQueryItem( it.name % QStringLiteral( ":provider" ), it.provider );
+    }
+
+
+  }
+  uri.setQuery( query );
+  return QString( uri.toEncoded() );
 }
