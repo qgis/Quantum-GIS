@@ -427,7 +427,7 @@ QString QgsPostgresProvider::pkParamWhereClause( int offset, const char *alias )
         int idx = mPrimaryKeyAttrs[i];
         QgsField fld = field( idx );
 
-        whereClause += delim + QStringLiteral( "%3%1=$%2" ).arg( connectionRO()->fieldExpressionForWhereClause( fld ) ).arg( offset++ ).arg( aliased );
+        whereClause += delim + QStringLiteral( "%3%1 IS NOT DISTINCT FROM $%2" ).arg( connectionRO()->fieldExpressionForWhereClause( fld ) ).arg( offset++ ).arg( aliased );
         delim = QStringLiteral( " AND " );
       }
     }
@@ -451,6 +451,11 @@ QString QgsPostgresProvider::pkParamWhereClause( int offset, const char *alias )
 }
 
 void QgsPostgresProvider::appendPkParams( QgsFeatureId featureId, QStringList &params ) const
+{
+  QgsPostgresProvider::appendPkParams( featureId, params, false );
+}
+
+void QgsPostgresProvider::appendPkParams( QgsFeatureId featureId, QStringList &params, bool asQuotedString ) const
 {
   switch ( mPrimaryKeyType )
   {
@@ -480,7 +485,9 @@ void QgsPostgresProvider::appendPkParams( QgsFeatureId featureId, QStringList &p
       {
         if ( i < pkVals.size() )
         {
-          params << pkVals[i].toString();
+          params << ( asQuotedString ? \
+                      QgsPostgresConn::quotedValue( pkVals[i] ) : \
+                      pkVals[i].toString() );
         }
         else
         {
@@ -3127,9 +3134,14 @@ bool QgsPostgresProvider::changeAttributeValues( const QgsChangedAttributesMap &
 
 void QgsPostgresProvider::appendGeomParam( const QgsGeometry &geom, QStringList &params ) const
 {
+  QgsPostgresProvider::appendGeomParam( geom, params, false );
+}
+
+void QgsPostgresProvider::appendGeomParam( const QgsGeometry &geom, QStringList &params, bool asQuotedString ) const
+{
   if ( geom.isNull() )
   {
-    params << QString();
+    params << ( asQuotedString ? QStringLiteral( "NULL" ) : QString() );
     return;
   }
 
@@ -3147,7 +3159,13 @@ void QgsPostgresProvider::appendGeomParam( const QgsGeometry &geom, QStringList 
     else
       param += QStringLiteral( "\\%1" ).arg( ( int ) buf[i], 3, 8, QChar( '0' ) );
   }
-  params << param;
+
+  if ( !asQuotedString )
+    params << param;
+  else if ( connectionRO()->useWkbHex() )
+    params << QStringLiteral( "'\\x%1'" ).arg( param );
+  else
+    params << QStringLiteral( "'%1'" ).arg( param );
 }
 
 bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_map )
@@ -3165,6 +3183,75 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
 
   bool returnvalue = true;
 
+  if ( mSpatialColType != SctTopoGeometry )
+  {
+    try
+    {
+      // Start the PostGIS transaction
+      conn->begin();
+
+      int chunkSizeNotLess = 123456; //in bytes
+      int chunkCount = 0;
+      int featureCount = 0;
+      QString updatePrepare;
+      QString paramStringChunk;
+      QgsPostgresResult result;
+
+      updatePrepare = QStringLiteral( "PREPARE updategeometrys AS UPDATE %1 SET %2=%3 WHERE %4;\n" )
+                      .arg( mQuery,
+                            quotedIdentifier( mGeometryColumn ),
+                            geomParam( 1 ),
+                            pkParamWhereClause( 2 ) );
+
+      const QgsGeometryMap::const_iterator lastIter = geometry_map.constEnd() - 1;
+      for ( QgsGeometryMap::const_iterator iter = geometry_map.constBegin();
+            iter != geometry_map.constEnd();
+            ++iter )
+      {
+        QStringList params;
+        QString paramString;
+
+        appendGeomParam( *iter, params, true );
+        appendPkParams( iter.key(), params, true );
+
+        paramString = params.join( QLatin1Char( ',' ) )
+                      .prepend( QStringLiteral( "EXECUTE updategeometrys(" ) )
+                      .append( QStringLiteral( ");" ) );
+        paramStringChunk += paramString;
+        featureCount++;
+
+        if ( iter == lastIter || paramStringChunk.size() > chunkSizeNotLess )
+        {
+          if ( chunkCount > 0 )
+            updatePrepare = QStringLiteral( "/*..START chunk=%1(%2)..*/\n" ).arg( chunkCount ).arg( featureCount );
+
+          result = conn->PQexec( updatePrepare + paramStringChunk );
+          if ( result.PQresultStatus() != PGRES_COMMAND_OK && result.PQresultStatus() != PGRES_TUPLES_OK )
+            throw PGException( result );
+
+          chunkCount++;
+          paramStringChunk = "";
+        }
+      } // for each feature
+
+      conn->PQexecNR( QStringLiteral( "DEALLOCATE updategeometrys;" ) );
+
+      returnvalue &= conn->commit();
+      if ( mTransaction )
+        mTransaction->dirtyLastSavePoint();
+    }
+    catch ( PGException &e )
+    {
+      pushError( tr( "PostGIS error while changing geometry values: %1" ).arg( e.errorMessage() ) );
+      conn->rollback();
+      conn->PQexecNR( QStringLiteral( "DEALLOCATE updategeometrys;" ) );
+      returnvalue = false;
+    }
+
+    conn->unlock();
+    return returnvalue;
+  }
+
   try
   {
     // Start the PostGIS transaction
@@ -3173,7 +3260,6 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
     QString update;
     QgsPostgresResult result;
 
-    if ( mSpatialColType == SctTopoGeometry )
     {
       // We will create a new TopoGeometry object with the new shape.
       // Later, we'll replace the old TopoGeometry with the new one,
@@ -3215,14 +3301,6 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
       }
 
     }
-    else
-    {
-      update = QStringLiteral( "UPDATE %1 SET %2=%3 WHERE %4" )
-               .arg( mQuery,
-                     quotedIdentifier( mGeometryColumn ),
-                     geomParam( 1 ),
-                     pkParamWhereClause( 2 ) );
-    }
 
     QgsDebugMsgLevel( "updating: " + update, 2 );
 
@@ -3244,11 +3322,10 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
 
       // Save the id of the current topogeometry
       long old_tg_id = -1;
-      if ( mSpatialColType == SctTopoGeometry )
       {
-        QStringList params;
-        appendPkParams( iter.key(), params );
-        result = connectionRO()->PQexecPrepared( QStringLiteral( "getid" ), params );
+        QStringList paramsTopo;
+        appendPkParams( iter.key(), paramsTopo );
+        result = connectionRO()->PQexecPrepared( QStringLiteral( "getid" ), paramsTopo );
         if ( result.PQresultStatus() != PGRES_TUPLES_OK )
         {
           QgsDebugMsg( QStringLiteral( "Exception thrown due to PQexecPrepared of 'getid' returning != PGRES_TUPLES_OK (%1 != expected %2)" )
@@ -3268,7 +3345,6 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
       if ( result.PQresultStatus() != PGRES_COMMAND_OK && result.PQresultStatus() != PGRES_TUPLES_OK )
         throw PGException( result );
 
-      if ( mSpatialColType == SctTopoGeometry )
       {
         long new_tg_id = result.PQgetvalue( 0, 0 ).toLong(); // new topogeo_id
 
@@ -3307,7 +3383,6 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
     } // for each feature
 
     conn->PQexecNR( QStringLiteral( "DEALLOCATE updatefeatures" ) );
-    if ( mSpatialColType == SctTopoGeometry )
     {
       connectionRO()->PQexecNR( QStringLiteral( "DEALLOCATE getid" ) );
       conn->PQexecNR( QStringLiteral( "DEALLOCATE replacetopogeom" ) );
@@ -3322,7 +3397,6 @@ bool QgsPostgresProvider::changeGeometryValues( const QgsGeometryMap &geometry_m
     pushError( tr( "PostGIS error while changing geometry values: %1" ).arg( e.errorMessage() ) );
     conn->rollback();
     conn->PQexecNR( QStringLiteral( "DEALLOCATE updatefeatures" ) );
-    if ( mSpatialColType == SctTopoGeometry )
     {
       connectionRO()->PQexecNR( QStringLiteral( "DEALLOCATE getid" ) );
       conn->PQexecNR( QStringLiteral( "DEALLOCATE replacetopogeom" ) );
