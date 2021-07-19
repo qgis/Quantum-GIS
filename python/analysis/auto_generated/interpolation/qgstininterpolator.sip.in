@@ -40,6 +40,9 @@ Ownership of ``feedback`` is not transferred and callers must ensure that it exi
     virtual int interpolatePoint( double x, double y, double &result /Out/, QgsFeedback *feedback );
 
 
+    virtual double interpolatedPoint( const QgsPointXY &point, QgsFeedback *feedback ) const;
+
+
     static QgsFields triangulationFields();
 %Docstring
 Returns the fields output by features when saving the triangulation.

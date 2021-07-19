@@ -55,6 +55,8 @@ class ANALYSIS_EXPORT QgsTinInterpolator: public QgsInterpolator
 
     int interpolatePoint( double x, double y, double &result SIP_OUT, QgsFeedback *feedback ) override;
 
+    double interpolatedPoint( const QgsPointXY &point, QgsFeedback *feedback ) const override;
+
     /**
      * Returns the fields output by features when saving the triangulation.
      * These fields should be used when creating
@@ -100,6 +102,7 @@ class ANALYSIS_EXPORT QgsTinInterpolator: public QgsInterpolator
     int insertData( const QgsFeature &f, QgsInterpolator::ValueSource source, int attr, SourceType type );
 
     int addPointsFromGeometry( const QgsGeometry &g, ValueSource source, double attributeValue );
+
 };
 
 #endif
