@@ -1266,24 +1266,27 @@ set(QGIS_GUI_PRIVATE_HDRS
   attributetable/qgsfeaturefilterwidget_p.h
 )
 
-find_package(Qt5 COMPONENTS Qml QuickWidgets REQUIRED)
+if (WITH_QT6)
+  find_package(Qt6 COMPONENTS Qml QuickWidgets REQUIRED)
+else()
+  find_package(Qt5 COMPONENTS Qml QuickWidgets REQUIRED)
+endif()
 
-if(Qt5Qml_FOUND)
-add_definitions(-DWITH_QML)
-set(QGIS_GUI_HDRS
-  ${QGIS_GUI_HDRS}
-  editorwidgets/qgsqmlwidgetwrapper.h
-)
+if(${QT_VERSION_BASE}Qml_FOUND)
+  add_definitions(-DWITH_QML)
+  set(QGIS_GUI_HDRS
+    ${QGIS_GUI_HDRS}
+    editorwidgets/qgsqmlwidgetwrapper.h
+  )
 endif()
 
 # for installing headers
 
-if(Qt5Qml_FOUND)
-
-set(QGIS_GUI_SRCS
-  ${QGIS_GUI_SRCS}
-  editorwidgets/qgsqmlwidgetwrapper.cpp
-)
+if(${QT_VERSION_BASE}Qml_FOUND)
+  set(QGIS_GUI_SRCS
+    ${QGIS_GUI_SRCS}
+    editorwidgets/qgsqmlwidgetwrapper.cpp
+  )
 endif()
 
 set_property(GLOBAL PROPERTY QGIS_GUI_HDRS ${QGIS_GUI_HDRS})
@@ -1497,10 +1500,10 @@ add_dependencies(qgis_gui ui)
 target_link_libraries(qgis_gui
   qgis_core
   qgis_native
-  ${Qt5UiTools_LIBRARIES}
+  ${${QT_VERSION_BASE}UiTools_LIBRARIES}
   ${QWT_LIBRARY}
   ${QSCINTILLA_LIBRARY}
-  ${Qt5QuickWidgets_LIBRARIES}
+  ${${QT_VERSION_BASE}QuickWidgets_LIBRARIES}
 )
 
 if (FORCE_STATIC_LIBS)
@@ -1516,7 +1519,7 @@ if (FORCE_STATIC_LIBS)
 endif()
 
 if(ENABLE_MODELTEST)
-  target_link_libraries(qgis_gui ${Qt5Test_LIBRARIES})
+  target_link_libraries(qgis_gui ${${QT_VERSION_BASE}Test_LIBRARIES})
 endif()
 
 target_compile_definitions(qgis_gui PRIVATE "-DQT_NO_FOREACH")
